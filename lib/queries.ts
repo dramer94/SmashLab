@@ -27,7 +27,7 @@ export function getFlag(country: string): string {
 export async function getMalaysianPlayers() {
   return prisma.slPlayer.findMany({
     where: { country: 'MAS', isActive: true },
-    orderBy: [{ worldRanking: 'asc' }, { name: 'asc' }],
+    orderBy: [{ worldRanking: 'asc' }, { matchCount: 'desc' }, { name: 'asc' }],
     take: 12,
   })
 }
