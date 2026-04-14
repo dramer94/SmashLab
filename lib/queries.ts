@@ -1,28 +1,8 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from './prisma'
+import { getFlag } from './utils'
 
-// Country code to flag emoji mapping
-const countryFlags: Record<string, string> = {
-  MAS: '🇲🇾', DEN: '🇩🇰', THA: '🇹🇭', CHN: '🇨🇳', INA: '🇮🇩',
-  JPN: '🇯🇵', SGP: '🇸🇬', TPE: '🇹🇼', KOR: '🇰🇷', IND: '🇮🇳',
-  ENG: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', GER: '🇩🇪', FRA: '🇫🇷', AUS: '🇦🇺', CAN: '🇨🇦',
-  USA: '🇺🇸', NED: '🇳🇱', HKG: '🇭🇰', VIE: '🇻🇳',
-  PHI: '🇵🇭', MYA: '🇲🇲', SRI: '🇱🇰', PAK: '🇵🇰', BAN: '🇧🇩',
-  NZL: '🇳🇿', RSA: '🇿🇦', ESP: '🇪🇸', SUI: '🇨🇭', SWE: '🇸🇪',
-  POL: '🇵🇱', SCO: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', IRL: '🇮🇪', WAL: '🏴󠁧󠁢󠁷󠁬󠁳󠁿', BEL: '🇧🇪',
-  RUS: '🇷🇺', UKR: '🇺🇦', BUL: '🇧🇬', ROU: '🇷🇴', CZE: '🇨🇿',
-  SVK: '🇸🇰', HUN: '🇭🇺', AUT: '🇦🇹', SLO: '🇸🇮', CRO: '🇭🇷',
-  SRB: '🇷🇸', NOR: '🇳🇴', FIN: '🇫🇮', POR: '🇵🇹', ITA: '🇮🇹',
-  GBR: '🇬🇧', MEX: '🇲🇽', BRA: '🇧🇷', ARG: '🇦🇷', CHI: '🇨🇱',
-  PER: '🇵🇪', COL: '🇨🇴', ECU: '🇪🇨', GUA: '🇬🇹', PAN: '🇵🇦',
-  MRI: '🇲🇺', NGR: '🇳🇬', KEN: '🇰🇪', EGY: '🇪🇬', TUN: '🇹🇳',
-  MGL: '🇲🇳', KAZ: '🇰🇿', UZB: '🇺🇿', GEO: '🇬🇪', ARM: '🇦🇲',
-  IRN: '🇮🇷', QAT: '🇶🇦', UAE: '🇦🇪', JOR: '🇯🇴', KUW: '🇰🇼',
-}
-
-export function getFlag(country: string): string {
-  return countryFlags[country] || country
-}
+export { getFlag }
 
 export async function getMalaysianPlayers() {
   return prisma.slPlayer.findMany({

@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { cn } from "@/lib/utils"
+import { cn, getFlag } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 
@@ -22,14 +22,6 @@ function getInitials(name: string): string {
     .slice(0, 2)
 }
 
-function countryToEmoji(countryCode: string): string {
-  const code = countryCode.toUpperCase()
-  if (code.length !== 2 && code.length !== 3) return countryCode
-  const twoLetter = code.slice(0, 2)
-  return String.fromCodePoint(
-    ...twoLetter.split("").map((c) => 0x1f1e6 + c.charCodeAt(0) - 65)
-  )
-}
 
 export function PlayerCard({ player }: { player: Player }) {
   return (
@@ -56,7 +48,7 @@ export function PlayerCard({ player }: { player: Player }) {
                 {player.name}
               </span>
               <span className="text-base" title={player.country}>
-                {countryToEmoji(player.country)}
+                {getFlag(player.country)}
               </span>
             </div>
 
