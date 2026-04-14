@@ -7,9 +7,10 @@ import { cn } from "@/lib/utils"
 
 const navLinks = [
   { href: "/players", label: "Players" },
-  { href: "/head-to-head", label: "Head-to-Head" },
-  { href: "/compare", label: "Compare" },
+  { href: "/countries", label: "Countries" },
   { href: "/tournaments", label: "Tournaments" },
+  { href: "/head-to-head", label: "H2H" },
+  { href: "/compare", label: "Compare" },
 ]
 
 export function Nav() {

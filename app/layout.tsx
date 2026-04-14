@@ -8,27 +8,28 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: {
-    default: "SmashLab - Malaysian Badminton Analytics",
+    default: "SmashLab - Global Badminton Analytics",
     template: "%s | SmashLab",
   },
   description:
-    "Deep analytics, head-to-head records, form trends, and tournament performance for Malaysian badminton players. Track Lee Zii Jia, Aaron Chia, Pearly Tan and more.",
+    "Complete global badminton database. Head-to-head records, career stats, form trends, and tournament results for players worldwide. Malaysia's deepest analytics hub.",
   keywords: [
+    "badminton analytics",
+    "badminton statistics",
+    "BWF World Tour",
     "Malaysian badminton",
     "Lee Zii Jia",
     "Aaron Chia",
-    "Soh Wooi Yik",
-    "Pearly Tan",
-    "Thinaah Muralitharan",
-    "badminton analytics",
-    "BWF",
+    "Viktor Axelsen",
+    "Kento Momota",
     "head to head",
     "badminton stats",
+    "badminton database",
   ],
   openGraph: {
-    title: "SmashLab - Malaysian Badminton Analytics",
+    title: "SmashLab - Global Badminton Analytics",
     description:
-      "The data hub for Malaysian badminton. Player stats, head-to-head records, form trends, and tournament analytics.",
+      "Complete global badminton database. Career stats, head-to-head records, and tournament results since the 1990s.",
     url: "https://smashlab.vacabc.my",
     siteName: "SmashLab",
     type: "website",

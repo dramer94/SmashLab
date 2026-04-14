@@ -25,8 +25,8 @@ export default async function HomePage() {
             </span>
           </h1>
           <p className="text-lg sm:text-xl text-gray-300 max-w-2xl mx-auto mb-8">
-            Deep analytics and insights for Malaysian badminton players.
-            Head-to-head records, form trends, and tournament performance.
+            Complete global badminton database. Career stats, head-to-head records,
+            and tournament results from every BWF World Tour event since the 1990s.
           </p>
           <div className="flex flex-wrap gap-3 justify-center">
             <Link
@@ -36,10 +36,10 @@ export default async function HomePage() {
               Explore Players
             </Link>
             <Link
-              href="/head-to-head"
+              href="/countries"
               className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/20"
             >
-              Head-to-Head
+              Browse Countries
             </Link>
           </div>
         </div>
