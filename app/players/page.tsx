@@ -3,6 +3,8 @@ import { getAllPlayersGlobal, getMalaysianPlayers } from '@/lib/queries'
 import { PlayerCard } from '@/components/player-card'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: "Players",
   description: "Browse badminton player profiles from around the world. Stats, head-to-head records, and tournament performance.",

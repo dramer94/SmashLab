@@ -4,6 +4,8 @@ import { PlayerCard } from "@/components/player-card"
 import { MatchResultRow } from "@/components/match-result-row"
 import { formatDate } from "@/lib/utils"
 
+export const dynamic = 'force-dynamic'
+
 export default async function HomePage() {
   const [players, latestMatches, stats] = await Promise.all([
     getMalaysianPlayers(),

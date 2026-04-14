@@ -3,6 +3,8 @@ import Link from "next/link"
 import { getTournaments } from "@/lib/queries"
 import { formatDate } from "@/lib/utils"
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: "Tournaments",
   description: "Badminton tournament results tracked on SmashLab. BWF World Tour events, Olympics, and more.",
