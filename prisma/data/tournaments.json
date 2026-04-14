@@ -1,0 +1,182 @@
+[
+  {
+    "name": "All England Open 2025",
+    "slug": "all-england-open-2025",
+    "level": "Super 1000",
+    "location": "Birmingham",
+    "country": "England",
+    "startDate": "2025-03-11",
+    "endDate": "2025-03-16",
+    "year": 2025
+  },
+  {
+    "name": "All England Open 2024",
+    "slug": "all-england-open-2024",
+    "level": "Super 1000",
+    "location": "Birmingham",
+    "country": "England",
+    "startDate": "2024-03-12",
+    "endDate": "2024-03-17",
+    "year": 2024
+  },
+  {
+    "name": "Malaysia Open 2025",
+    "slug": "malaysia-open-2025",
+    "level": "Super 1000",
+    "location": "Kuala Lumpur",
+    "country": "Malaysia",
+    "startDate": "2025-01-07",
+    "endDate": "2025-01-12",
+    "year": 2025
+  },
+  {
+    "name": "Malaysia Open 2024",
+    "slug": "malaysia-open-2024",
+    "level": "Super 1000",
+    "location": "Kuala Lumpur",
+    "country": "Malaysia",
+    "startDate": "2024-01-09",
+    "endDate": "2024-01-14",
+    "year": 2024
+  },
+  {
+    "name": "Indonesia Open 2024",
+    "slug": "indonesia-open-2024",
+    "level": "Super 1000",
+    "location": "Jakarta",
+    "country": "Indonesia",
+    "startDate": "2024-06-04",
+    "endDate": "2024-06-09",
+    "year": 2024
+  },
+  {
+    "name": "China Open 2024",
+    "slug": "china-open-2024",
+    "level": "Super 1000",
+    "location": "Changzhou",
+    "country": "China",
+    "startDate": "2024-09-10",
+    "endDate": "2024-09-15",
+    "year": 2024
+  },
+  {
+    "name": "Denmark Open 2024",
+    "slug": "denmark-open-2024",
+    "level": "Super 750",
+    "location": "Odense",
+    "country": "Denmark",
+    "startDate": "2024-10-15",
+    "endDate": "2024-10-20",
+    "year": 2024
+  },
+  {
+    "name": "French Open 2024",
+    "slug": "french-open-2024",
+    "level": "Super 750",
+    "location": "Paris",
+    "country": "France",
+    "startDate": "2024-10-22",
+    "endDate": "2024-10-27",
+    "year": 2024
+  },
+  {
+    "name": "Japan Open 2024",
+    "slug": "japan-open-2024",
+    "level": "Super 750",
+    "location": "Osaka",
+    "country": "Japan",
+    "startDate": "2024-08-20",
+    "endDate": "2024-08-25",
+    "year": 2024
+  },
+  {
+    "name": "Korea Open 2024",
+    "slug": "korea-open-2024",
+    "level": "Super 500",
+    "location": "Seoul",
+    "country": "South Korea",
+    "startDate": "2024-04-02",
+    "endDate": "2024-04-07",
+    "year": 2024
+  },
+  {
+    "name": "Thailand Open 2024",
+    "slug": "thailand-open-2024",
+    "level": "Super 500",
+    "location": "Bangkok",
+    "country": "Thailand",
+    "startDate": "2024-05-14",
+    "endDate": "2024-05-19",
+    "year": 2024
+  },
+  {
+    "name": "India Open 2025",
+    "slug": "india-open-2025",
+    "level": "Super 750",
+    "location": "New Delhi",
+    "country": "India",
+    "startDate": "2025-02-11",
+    "endDate": "2025-02-16",
+    "year": 2025
+  },
+  {
+    "name": "Paris Olympics 2024",
+    "slug": "paris-olympics-2024",
+    "level": "Major",
+    "location": "Paris",
+    "country": "France",
+    "startDate": "2024-07-27",
+    "endDate": "2024-08-05",
+    "year": 2024
+  },
+  {
+    "name": "BWF World Tour Finals 2024",
+    "slug": "bwf-world-tour-finals-2024",
+    "level": "Major",
+    "location": "Hangzhou",
+    "country": "China",
+    "startDate": "2024-12-11",
+    "endDate": "2024-12-15",
+    "year": 2024
+  },
+  {
+    "name": "Singapore Open 2024",
+    "slug": "singapore-open-2024",
+    "level": "Super 500",
+    "location": "Singapore",
+    "country": "Singapore",
+    "startDate": "2024-05-28",
+    "endDate": "2024-06-02",
+    "year": 2024
+  },
+  {
+    "name": "Malaysia Masters 2025",
+    "slug": "malaysia-masters-2025",
+    "level": "Super 500",
+    "location": "Kuala Lumpur",
+    "country": "Malaysia",
+    "startDate": "2025-05-20",
+    "endDate": "2025-05-25",
+    "year": 2025
+  },
+  {
+    "name": "Indonesia Masters 2025",
+    "slug": "indonesia-masters-2025",
+    "level": "Super 500",
+    "location": "Jakarta",
+    "country": "Indonesia",
+    "startDate": "2025-01-21",
+    "endDate": "2025-01-26",
+    "year": 2025
+  },
+  {
+    "name": "Arctic Open 2024",
+    "slug": "arctic-open-2024",
+    "level": "Super 500",
+    "location": "Vantaa",
+    "country": "Finland",
+    "startDate": "2024-11-05",
+    "endDate": "2024-11-10",
+    "year": 2024
+  }
+]

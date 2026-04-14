@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model SlPlayer {
+  id           String    @id @default(cuid())
+  name         String
+  slug         String    @unique
+  country      String    @default("MAS")
+  birthDate    DateTime?
+  height       String?
+  playStyle    String?
+  category     String    // MS, WS, MD, WD, XD
+  bwfId        String?   @unique
+  imageUrl     String?
+  worldRanking Int?
+  bio          String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  matchesAsPlayer1 SlMatch[] @relation("Player1Matches")
+  matchesAsPlayer2 SlMatch[] @relation("Player2Matches")
+
+  @@map("sl_player")
+}
+
+model SlTournament {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  level     String    // Super 1000, Super 750, Super 500, Super 300, Super 100, Major
+  location  String?
+  country   String?
+  startDate DateTime
+  endDate   DateTime?
+  year      Int
+  createdAt DateTime  @default(now())
+
+  matches SlMatch[]
+
+  @@map("sl_tournament")
+}
+
+model SlMatch {
+  id             String       @id @default(cuid())
+  tournamentId   String
+  tournament     SlTournament @relation(fields: [tournamentId], references: [id])
+  round          String       // F, SF, QF, R16, R32, R64, Group
+  date           DateTime
+  category       String       // MS, WS, MD, WD, XD
+  player1Id      String
+  player1        SlPlayer     @relation("Player1Matches", fields: [player1Id], references: [id])
+  player2Id      String
+  player2        SlPlayer     @relation("Player2Matches", fields: [player2Id], references: [id])
+  player1Partner String?
+  player2Partner String?
+  score          String       // "21-19 21-17" or "21-19 18-21 21-15"
+  winnerId       String?
+  walkover       Boolean      @default(false)
+  durationMin    Int?
+  createdAt      DateTime     @default(now())
+
+  @@map("sl_match")
+}
