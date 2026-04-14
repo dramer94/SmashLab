@@ -251,6 +251,13 @@ const SEARCH_TERMS = [
   'Cup', 'Grand', 'Series', 'World', 'Thomas', 'Sudirman',
   'All England', 'Olympic', 'Korea', 'China', 'Japan', 'India',
   'Final', 'Super', 'Tour', 'Invitation',
+  'Malaysia', 'Indonesia', 'Thailand', 'Singapore', 'Vietnam',
+  'Denmark', 'Germany', 'France', 'Spain', 'Swiss', 'Dutch',
+  'Scottish', 'Irish', 'Polish', 'Czech', 'Hungarian', 'Bulgarian',
+  'Canada', 'Australia', 'New Zealand', 'Brazil', 'Mexico',
+  'Ghana', 'Uganda', 'Egypt', 'Africa',
+  'Kazakhstan', 'Uzbekistan', 'Iran', 'Sri Lanka',
+  'BWF', 'Yonex', 'Victor', 'Li-Ning',
 ]
 
 async function discoverTournamentsViaSearch(
