@@ -60,7 +60,7 @@ export async function getAllPlayersGlobal(params: {
   const [players, total] = await Promise.all([
     prisma.slPlayer.findMany({
       where,
-      orderBy: [{ worldRanking: 'asc' }, { name: 'asc' }],
+      orderBy: [{ worldRanking: 'asc' }, { matchCount: 'desc' }, { name: 'asc' }],
       skip: (page - 1) * limit,
       take: limit,
     }),
@@ -73,19 +73,23 @@ export async function getAllPlayersGlobal(params: {
 export async function getCountrySummaries() {
   const players = await prisma.slPlayer.findMany({
     where: { isActive: true },
-    select: { country: true, name: true, worldRanking: true },
+    select: { country: true, name: true, worldRanking: true, matchCount: true },
   })
 
-  const map = new Map<string, { count: number; topPlayer: string | null; topRanking: number | null }>()
+  const map = new Map<string, { count: number; topPlayer: string | null; topRanking: number | null; topMatchCount: number }>()
 
   for (const p of players) {
     if (!map.has(p.country)) {
-      map.set(p.country, { count: 0, topPlayer: null, topRanking: null })
+      map.set(p.country, { count: 0, topPlayer: null, topRanking: null, topMatchCount: 0 })
     }
     const entry = map.get(p.country)!
     entry.count++
+    // Prefer world-ranked player as "top player", fall back to most matches
     if (p.worldRanking && (!entry.topRanking || p.worldRanking < entry.topRanking)) {
       entry.topRanking = p.worldRanking
+      entry.topPlayer = p.name
+    } else if (!entry.topPlayer && p.matchCount > entry.topMatchCount) {
+      entry.topMatchCount = p.matchCount
       entry.topPlayer = p.name
     }
   }
