@@ -210,9 +210,11 @@ async function fetchText(path: string, delayMs: number, retries = 3): Promise<st
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const { stdout } = await execFileAsync('curl', ['-sS', '-A', USER_AGENT, url], {
-        maxBuffer: 24 * 1024 * 1024,
-      })
+      const { stdout } = await execFileAsync(
+        'curl',
+        ['-sS', '-A', USER_AGENT, '--max-time', '45', url],
+        { maxBuffer: 24 * 1024 * 1024 }
+      )
       return stdout
     } catch (err) {
       if (attempt === retries) {
@@ -226,6 +228,66 @@ async function fetchText(path: string, delayMs: number, retries = 3): Promise<st
   }
 
   return ''
+}
+
+interface TournamentSearchResult {
+  unifiedId: string
+  name: string
+  startDate: string
+  endDate: string
+  city: string
+  country: string
+  category: string
+  isTeamTournament: boolean
+  isJuniorTournament: boolean
+  isWorldTour: boolean
+}
+
+// ─── Tournament Discovery via JSON Search API ─────────────────────────────────
+// Much faster than year-by-year player report scraping (JSON vs HTML, no pagination)
+
+const SEARCH_TERMS = [
+  'International', 'Open', 'Championship', 'Masters',
+  'Cup', 'Grand', 'Series', 'World', 'Thomas', 'Sudirman',
+  'All England', 'Olympic', 'Korea', 'China', 'Japan', 'India',
+  'Final', 'Super', 'Tour', 'Invitation',
+]
+
+async function discoverTournamentsViaSearch(
+  startYear: number,
+  endYear: number,
+): Promise<Set<string>> {
+  const allGuids = new Set<string>()
+  console.log(`Discovering tournaments for ${startYear}-${endYear} via JSON search API...`)
+
+  for (const term of SEARCH_TERMS) {
+    try {
+      const url = `${BASE_URL}/JQuery/SearchTournament/${encodeURIComponent(term)}`
+      const { stdout } = await execFileAsync(
+        'curl',
+        ['-sS', '-A', USER_AGENT, '--max-time', '30', url],
+        { maxBuffer: 8 * 1024 * 1024 }
+      )
+      const data: TournamentSearchResult[] = JSON.parse(stdout)
+      let added = 0
+      for (const t of data) {
+        const year = Number(t.startDate.substring(0, 4))
+        if (year >= startYear && year <= endYear) {
+          if (!allGuids.has(t.unifiedId)) {
+            allGuids.add(t.unifiedId)
+            added++
+          }
+        }
+      }
+      console.log(`  "${term}": ${data.length} results → ${added} new in year range`)
+      await sleep(500)
+    } catch (err) {
+      console.warn(`  "${term}": search failed — ${(err as Error).message}`)
+    }
+  }
+
+  console.log(`Total unique tournaments discovered: ${allGuids.size}`)
+  return allGuids
 }
 
 async function runWithConcurrency<T>(
@@ -971,14 +1033,8 @@ async function main() {
       tournamentGuids = new Set(dbTournaments.map((t) => t.externalId!))
       console.log(`Incremental: ${tournamentGuids.size} tournaments to process`)
     } else {
-      // Full mode: discover all players and tournaments
-      console.log('Full mode: discovering all players...')
-      const discoveredPlayers = await discoverAllPlayers(years, concurrency, delayMs)
-      totalPlayersDiscovered = discoveredPlayers.size
-      console.log(`Discovered ${discoveredPlayers.size} players worldwide`)
-
-      console.log('Collecting tournament IDs...')
-      tournamentGuids = await collectTournamentIds(discoveredPlayers, years, concurrency, delayMs)
+      // Full mode: discover tournaments via JSON search API (fast)
+      tournamentGuids = await discoverTournamentsViaSearch(startYear, endYear)
       console.log(`Discovered ${tournamentGuids.size} unique tournaments`)
     }
 
