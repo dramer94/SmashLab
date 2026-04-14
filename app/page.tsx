@@ -1,12 +1,14 @@
 import Link from "next/link"
-import { getMalaysianPlayers, getLatestMatches, getFlag } from "@/lib/queries"
+import { getMalaysianPlayers, getLatestMatches, getSiteStats } from "@/lib/queries"
 import { PlayerCard } from "@/components/player-card"
 import { MatchResultRow } from "@/components/match-result-row"
+import { formatDate } from "@/lib/utils"
 
 export default async function HomePage() {
-  const [players, latestMatches] = await Promise.all([
+  const [players, latestMatches, stats] = await Promise.all([
     getMalaysianPlayers(),
     getLatestMatches(8),
+    getSiteStats(),
   ])
 
   return (
@@ -81,10 +83,13 @@ export default async function HomePage() {
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-12 mb-12">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { label: "Players Tracked", value: "28" },
-            { label: "Tournaments", value: "18" },
-            { label: "Matches Recorded", value: "79" },
-            { label: "Categories", value: "MS / MD / WD / XD" },
+            { label: "Malaysian Players", value: stats.malaysianPlayers.toString() },
+            { label: "Tournaments", value: stats.tournaments.toString() },
+            { label: "Matches Recorded", value: stats.matches.toString() },
+            {
+              label: "Data Through",
+              value: stats.latestMatchDate ? formatDate(stats.latestMatchDate, { month: "short", day: "numeric", year: "numeric" }) : "N/A",
+            },
           ].map((stat) => (
             <div
               key={stat.label}

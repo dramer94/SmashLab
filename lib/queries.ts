@@ -221,6 +221,30 @@ export async function getLatestMatches(limit = 10) {
   })
 }
 
+export async function getSiteStats() {
+  const [malaysianPlayers, tournaments, matches, latestMatch] = await Promise.all([
+    prisma.slPlayer.count({
+      where: {
+        isActive: true,
+        country: 'MAS',
+      },
+    }),
+    prisma.slTournament.count(),
+    prisma.slMatch.count(),
+    prisma.slMatch.findFirst({
+      orderBy: { date: 'desc' },
+      select: { date: true },
+    }),
+  ])
+
+  return {
+    malaysianPlayers,
+    tournaments,
+    matches,
+    latestMatchDate: latestMatch?.date ?? null,
+  }
+}
+
 export async function getTournaments() {
   return prisma.slTournament.findMany({
     orderBy: { startDate: 'desc' },

@@ -1,72 +1,412 @@
 [
   {
-    "name": "All England Open 2025",
-    "slug": "all-england-open-2025",
+    "name": "Orleans Masters Badminton 2026 presented by VICTOR",
+    "level": "Super 300",
+    "location": "Orléans",
+    "country": "France",
+    "startDate": "2026-03-17",
+    "endDate": "2026-03-22",
+    "year": 2026,
+    "slug": "orleans-masters-badminton-2026-presented-by-victor"
+  },
+  {
+    "name": "Ruichang China Masters 2026",
+    "level": "Super 100",
+    "location": "Ruichang",
+    "country": "China",
+    "startDate": "2026-03-10",
+    "endDate": "2026-03-15",
+    "year": 2026,
+    "slug": "ruichang-china-masters-2026"
+  },
+  {
+    "name": "YONEX Swiss Open 2026",
+    "level": "Super 300",
+    "location": "Basel",
+    "country": "Switzerland",
+    "startDate": "2026-03-10",
+    "endDate": "2026-03-15",
+    "year": 2026,
+    "slug": "yonex-swiss-open-2026"
+  },
+  {
+    "name": "YONEX All England Open Badminton Championships 2026",
+    "level": "Super 1000",
+    "location": "Birmingham",
+    "country": "England",
+    "startDate": "2026-03-03",
+    "endDate": "2026-03-08",
+    "year": 2026,
+    "slug": "yonex-all-england-open-badminton-championships-2026"
+  },
+  {
+    "name": "YONEX German Open 2026",
+    "level": "Super 300",
+    "location": "Mülheim an der Ruhr",
+    "country": "Germany",
+    "startDate": "2026-02-24",
+    "endDate": "2026-03-01",
+    "year": 2026,
+    "slug": "yonex-german-open-2026"
+  },
+  {
+    "name": "PRINCESS SIRIVANNAVARI Thailand Masters 2026",
+    "level": "Super 300",
+    "location": "Patumwan",
+    "country": "Thailand",
+    "startDate": "2026-01-27",
+    "endDate": "2026-02-01",
+    "year": 2026,
+    "slug": "princess-sirivannavari-thailand-masters-2026"
+  },
+  {
+    "name": "DAIHATSU Indonesia Masters 2026",
+    "level": "Super 500",
+    "location": "Jakarta",
+    "country": "Indonesia",
+    "startDate": "2026-01-20",
+    "endDate": "2026-01-25",
+    "year": 2026,
+    "slug": "daihatsu-indonesia-masters-2026"
+  },
+  {
+    "name": "YONEX-SUNRISE India Open 2026",
+    "level": "Super 750",
+    "location": "New Delhi",
+    "country": "India",
+    "startDate": "2026-01-13",
+    "endDate": "2026-01-18",
+    "year": 2026,
+    "slug": "yonex-sunrise-india-open-2026"
+  },
+  {
+    "name": "PETRONAS Malaysia Open 2026",
+    "level": "Super 1000",
+    "location": "Kuala Lumpur",
+    "country": "Malaysia",
+    "startDate": "2026-01-06",
+    "endDate": "2026-01-11",
+    "year": 2026,
+    "slug": "petronas-malaysia-open-2026"
+  },
+  {
+    "name": "HSBC BWF World Tour Finals 2025",
+    "level": "Major",
+    "location": "Hangzhou",
+    "country": "China",
+    "startDate": "2025-12-17",
+    "endDate": "2025-12-21",
+    "year": 2025,
+    "slug": "hsbc-bwf-world-tour-finals-2025"
+  },
+  {
+    "name": "SYED MODI India International 2025",
+    "level": "Super 300",
+    "location": "Lucknow",
+    "country": "India",
+    "startDate": "2025-11-25",
+    "endDate": "2025-11-30",
+    "year": 2025,
+    "slug": "syed-modi-india-international-2025"
+  },
+  {
+    "name": "SATHIO GROUP Australian Open 2025",
+    "level": "Super 500",
+    "location": "Sydney",
+    "country": "Australia",
+    "startDate": "2025-11-18",
+    "endDate": "2025-11-23",
+    "year": 2025,
+    "slug": "sathio-group-australian-open-2025"
+  },
+  {
+    "name": "Kumamoto Masters Japan 2025",
+    "level": "Super 500",
+    "location": "Kumamoto City",
+    "country": "Japan",
+    "startDate": "2025-11-11",
+    "endDate": "2025-11-16",
+    "year": 2025,
+    "slug": "kumamoto-masters-japan-2025"
+  },
+  {
+    "name": "IKSAN VICTOR Korea Masters 2025",
+    "level": "Super 300",
+    "location": "Iksan City",
+    "country": "Korea",
+    "startDate": "2025-11-04",
+    "endDate": "2025-11-09",
+    "year": 2025,
+    "slug": "iksan-victor-korea-masters-2025"
+  },
+  {
+    "name": "HYLO Open 2025",
+    "level": "Super 500",
+    "location": "Saarbrücken",
+    "country": "Germany",
+    "startDate": "2025-10-28",
+    "endDate": "2025-11-02",
+    "year": 2025,
+    "slug": "hylo-open-2025"
+  },
+  {
+    "name": "WONDR by BNI Indonesia Masters II 2025",
+    "level": "Super 100",
+    "location": "Medan",
+    "country": "Indonesia",
+    "startDate": "2025-10-21",
+    "endDate": "2025-10-26",
+    "year": 2025,
+    "slug": "wondr-by-bni-indonesia-masters-ii-2025"
+  },
+  {
+    "name": "YONEX French Open 2025",
+    "level": "Super 750",
+    "location": "Cesson-Sévigné",
+    "country": "France",
+    "startDate": "2025-10-21",
+    "endDate": "2025-10-26",
+    "year": 2025,
+    "slug": "yonex-french-open-2025"
+  },
+  {
+    "name": "VICTOR Denmark Open 2025",
+    "level": "Super 750",
+    "location": "Odense",
+    "country": "Denmark",
+    "startDate": "2025-10-14",
+    "endDate": "2025-10-19",
+    "year": 2025,
+    "slug": "victor-denmark-open-2025"
+  },
+  {
+    "name": "SUWON VICTOR Korea Open 2025",
+    "level": "Super 500",
+    "location": "Suwon-si",
+    "country": "Korea",
+    "startDate": "2025-09-23",
+    "endDate": "2025-09-28",
+    "year": 2025,
+    "slug": "suwon-victor-korea-open-2025"
+  },
+  {
+    "name": "LI-NING China Masters 2025",
+    "level": "Super 750",
+    "location": "Shenzhen",
+    "country": "China",
+    "startDate": "2025-09-16",
+    "endDate": "2025-09-21",
+    "year": 2025,
+    "slug": "li-ning-china-masters-2025"
+  },
+  {
+    "name": "WONDR by BNI Indonesia Masters I 2025",
+    "level": "Super 100",
+    "location": "Riau ( formerly Solo)",
+    "country": "Indonesia",
+    "startDate": "2025-09-16",
+    "endDate": "2025-09-21",
+    "year": 2025,
+    "slug": "wondr-by-bni-indonesia-masters-i-2025"
+  },
+  {
+    "name": "LI-NING Hong Kong Open 2025",
+    "level": "Super 500",
+    "location": "Kowloon",
+    "country": "Hong Kong China",
+    "startDate": "2025-09-09",
+    "endDate": "2025-09-14",
+    "year": 2025,
+    "slug": "li-ning-hong-kong-open-2025"
+  },
+  {
+    "name": "YONEX SUNRISE Vietnam Open 2025",
+    "level": "Super 100",
+    "location": "Ho Chi Minh",
+    "country": "Vietnam",
+    "startDate": "2025-09-09",
+    "endDate": "2025-09-14",
+    "year": 2025,
+    "slug": "yonex-sunrise-vietnam-open-2025"
+  },
+  {
+    "name": "VICTOR China Open 2025",
+    "level": "Super 1000",
+    "location": "Changzhou",
+    "country": "China",
+    "startDate": "2025-07-22",
+    "endDate": "2025-07-27",
+    "year": 2025,
+    "slug": "victor-china-open-2025"
+  },
+  {
+    "name": "DAIHATSU Japan Open 2025",
+    "level": "Super 750",
+    "location": "Tokyo",
+    "country": "Japan",
+    "startDate": "2025-07-15",
+    "endDate": "2025-07-20",
+    "year": 2025,
+    "slug": "daihatsu-japan-open-2025"
+  },
+  {
+    "name": "YONEX Canada Open 2025",
+    "level": "Super 300",
+    "location": "Markham Ontario",
+    "country": "Canada",
+    "startDate": "2025-07-01",
+    "endDate": "2025-07-06",
+    "year": 2025,
+    "slug": "yonex-canada-open-2025"
+  },
+  {
+    "name": "KAPAL API Indonesia Open 2025",
+    "level": "Super 1000",
+    "location": "Jakarta",
+    "country": "Indonesia",
+    "startDate": "2025-06-03",
+    "endDate": "2025-06-08",
+    "year": 2025,
+    "slug": "kapal-api-indonesia-open-2025"
+  },
+  {
+    "name": "PERODUA Malaysia Masters 2025",
+    "level": "Super 500",
+    "location": "Kuala Lumpur",
+    "country": "Malaysia",
+    "startDate": "2025-05-20",
+    "endDate": "2025-05-25",
+    "year": 2025,
+    "slug": "perodua-malaysia-masters-2025"
+  },
+  {
+    "name": "TOYOTA Thailand Open 2025",
+    "level": "Super 500",
+    "location": "Patumwan",
+    "country": "Thailand",
+    "startDate": "2025-05-13",
+    "endDate": "2025-05-18",
+    "year": 2025,
+    "slug": "toyota-thailand-open-2025"
+  },
+  {
+    "name": "YONEX Taipei Open 2025",
+    "level": "Super 300",
+    "location": "Taipei",
+    "country": "Chinese Taipei",
+    "startDate": "2025-05-06",
+    "endDate": "2025-05-11",
+    "year": 2025,
+    "slug": "yonex-taipei-open-2025"
+  },
+  {
+    "name": "YONEX Swiss Open 2025",
+    "level": "Super 300",
+    "location": "Basel",
+    "country": "Switzerland",
+    "startDate": "2025-03-18",
+    "endDate": "2025-03-23",
+    "year": 2025,
+    "slug": "yonex-swiss-open-2025"
+  },
+  {
+    "name": "Ruichang China Masters 2025",
+    "level": "Super 100",
+    "location": "Ruichang",
+    "country": "China",
+    "startDate": "2025-03-11",
+    "endDate": "2025-03-16",
+    "year": 2025,
+    "slug": "ruichang-china-masters-2025"
+  },
+  {
+    "name": "YONEX All England Open Badminton Championships 2025",
     "level": "Super 1000",
     "location": "Birmingham",
     "country": "England",
     "startDate": "2025-03-11",
     "endDate": "2025-03-16",
-    "year": 2025
+    "year": 2025,
+    "slug": "yonex-all-england-open-badminton-championships-2025"
   },
   {
-    "name": "All England Open 2024",
-    "slug": "all-england-open-2024",
-    "level": "Super 1000",
-    "location": "Birmingham",
-    "country": "England",
-    "startDate": "2024-03-12",
-    "endDate": "2024-03-17",
-    "year": 2024
+    "name": "Orleans Masters Badminton 2025 presented by VICTOR",
+    "level": "Super 300",
+    "location": "Orléans",
+    "country": "France",
+    "startDate": "2025-03-04",
+    "endDate": "2025-03-09",
+    "year": 2025,
+    "slug": "orleans-masters-badminton-2025-presented-by-victor"
   },
   {
-    "name": "Malaysia Open 2025",
-    "slug": "malaysia-open-2025",
+    "name": "YONEX German Open 2025",
+    "level": "Super 300",
+    "location": "Mülheim an der Ruhr",
+    "country": "Germany",
+    "startDate": "2025-02-25",
+    "endDate": "2025-03-02",
+    "year": 2025,
+    "slug": "yonex-german-open-2025"
+  },
+  {
+    "name": "PRINCESS SIRIVANNAVARI Thailand Masters 2025",
+    "level": "Super 300",
+    "location": "Patumwan",
+    "country": "Thailand",
+    "startDate": "2025-01-28",
+    "endDate": "2025-02-02",
+    "year": 2025,
+    "slug": "princess-sirivannavari-thailand-masters-2025"
+  },
+  {
+    "name": "DAIHATSU Indonesia Masters 2025",
+    "level": "Super 500",
+    "location": "Jakarta",
+    "country": "Indonesia",
+    "startDate": "2025-01-21",
+    "endDate": "2025-01-26",
+    "year": 2025,
+    "slug": "daihatsu-indonesia-masters-2025"
+  },
+  {
+    "name": "YONEX-SUNRISE India Open 2025",
+    "level": "Super 750",
+    "location": "New Delhi",
+    "country": "India",
+    "startDate": "2025-01-14",
+    "endDate": "2025-01-19",
+    "year": 2025,
+    "slug": "yonex-sunrise-india-open-2025"
+  },
+  {
+    "name": "PETRONAS Malaysia Open 2025",
     "level": "Super 1000",
     "location": "Kuala Lumpur",
     "country": "Malaysia",
     "startDate": "2025-01-07",
     "endDate": "2025-01-12",
-    "year": 2025
+    "year": 2025,
+    "slug": "petronas-malaysia-open-2025"
   },
   {
-    "name": "Malaysia Open 2024",
-    "slug": "malaysia-open-2024",
-    "level": "Super 1000",
-    "location": "Kuala Lumpur",
-    "country": "Malaysia",
-    "startDate": "2024-01-09",
-    "endDate": "2024-01-14",
-    "year": 2024
-  },
-  {
-    "name": "Indonesia Open 2024",
-    "slug": "indonesia-open-2024",
-    "level": "Super 1000",
-    "location": "Jakarta",
-    "country": "Indonesia",
-    "startDate": "2024-06-04",
-    "endDate": "2024-06-09",
-    "year": 2024
-  },
-  {
-    "name": "China Open 2024",
-    "slug": "china-open-2024",
-    "level": "Super 1000",
-    "location": "Changzhou",
+    "name": "BWF World Tour Finals 2024",
+    "slug": "bwf-world-tour-finals-2024",
+    "level": "Major",
+    "location": "Hangzhou",
     "country": "China",
-    "startDate": "2024-09-10",
-    "endDate": "2024-09-15",
+    "startDate": "2024-12-11",
+    "endDate": "2024-12-15",
     "year": 2024
   },
   {
-    "name": "Denmark Open 2024",
-    "slug": "denmark-open-2024",
-    "level": "Super 750",
-    "location": "Odense",
-    "country": "Denmark",
-    "startDate": "2024-10-15",
-    "endDate": "2024-10-20",
+    "name": "Arctic Open 2024",
+    "slug": "arctic-open-2024",
+    "level": "Super 500",
+    "location": "Vantaa",
+    "country": "Finland",
+    "startDate": "2024-11-05",
+    "endDate": "2024-11-10",
     "year": 2024
   },
   {
@@ -80,6 +420,26 @@
     "year": 2024
   },
   {
+    "name": "Denmark Open 2024",
+    "slug": "denmark-open-2024",
+    "level": "Super 750",
+    "location": "Odense",
+    "country": "Denmark",
+    "startDate": "2024-10-15",
+    "endDate": "2024-10-20",
+    "year": 2024
+  },
+  {
+    "name": "China Open 2024",
+    "slug": "china-open-2024",
+    "level": "Super 1000",
+    "location": "Changzhou",
+    "country": "China",
+    "startDate": "2024-09-10",
+    "endDate": "2024-09-15",
+    "year": 2024
+  },
+  {
     "name": "Japan Open 2024",
     "slug": "japan-open-2024",
     "level": "Super 750",
@@ -88,36 +448,6 @@
     "startDate": "2024-08-20",
     "endDate": "2024-08-25",
     "year": 2024
-  },
-  {
-    "name": "Korea Open 2024",
-    "slug": "korea-open-2024",
-    "level": "Super 500",
-    "location": "Seoul",
-    "country": "South Korea",
-    "startDate": "2024-04-02",
-    "endDate": "2024-04-07",
-    "year": 2024
-  },
-  {
-    "name": "Thailand Open 2024",
-    "slug": "thailand-open-2024",
-    "level": "Super 500",
-    "location": "Bangkok",
-    "country": "Thailand",
-    "startDate": "2024-05-14",
-    "endDate": "2024-05-19",
-    "year": 2024
-  },
-  {
-    "name": "India Open 2025",
-    "slug": "india-open-2025",
-    "level": "Super 750",
-    "location": "New Delhi",
-    "country": "India",
-    "startDate": "2025-02-11",
-    "endDate": "2025-02-16",
-    "year": 2025
   },
   {
     "name": "Paris Olympics 2024",
@@ -130,13 +460,13 @@
     "year": 2024
   },
   {
-    "name": "BWF World Tour Finals 2024",
-    "slug": "bwf-world-tour-finals-2024",
-    "level": "Major",
-    "location": "Hangzhou",
-    "country": "China",
-    "startDate": "2024-12-11",
-    "endDate": "2024-12-15",
+    "name": "Indonesia Open 2024",
+    "slug": "indonesia-open-2024",
+    "level": "Super 1000",
+    "location": "Jakarta",
+    "country": "Indonesia",
+    "startDate": "2024-06-04",
+    "endDate": "2024-06-09",
     "year": 2024
   },
   {
@@ -150,33 +480,43 @@
     "year": 2024
   },
   {
-    "name": "Malaysia Masters 2025",
-    "slug": "malaysia-masters-2025",
+    "name": "Thailand Open 2024",
+    "slug": "thailand-open-2024",
     "level": "Super 500",
+    "location": "Bangkok",
+    "country": "Thailand",
+    "startDate": "2024-05-14",
+    "endDate": "2024-05-19",
+    "year": 2024
+  },
+  {
+    "name": "Korea Open 2024",
+    "slug": "korea-open-2024",
+    "level": "Super 500",
+    "location": "Seoul",
+    "country": "South Korea",
+    "startDate": "2024-04-02",
+    "endDate": "2024-04-07",
+    "year": 2024
+  },
+  {
+    "name": "All England Open 2024",
+    "slug": "all-england-open-2024",
+    "level": "Super 1000",
+    "location": "Birmingham",
+    "country": "England",
+    "startDate": "2024-03-12",
+    "endDate": "2024-03-17",
+    "year": 2024
+  },
+  {
+    "name": "Malaysia Open 2024",
+    "slug": "malaysia-open-2024",
+    "level": "Super 1000",
     "location": "Kuala Lumpur",
     "country": "Malaysia",
-    "startDate": "2025-05-20",
-    "endDate": "2025-05-25",
-    "year": 2025
-  },
-  {
-    "name": "Indonesia Masters 2025",
-    "slug": "indonesia-masters-2025",
-    "level": "Super 500",
-    "location": "Jakarta",
-    "country": "Indonesia",
-    "startDate": "2025-01-21",
-    "endDate": "2025-01-26",
-    "year": 2025
-  },
-  {
-    "name": "Arctic Open 2024",
-    "slug": "arctic-open-2024",
-    "level": "Super 500",
-    "location": "Vantaa",
-    "country": "Finland",
-    "startDate": "2024-11-05",
-    "endDate": "2024-11-10",
+    "startDate": "2024-01-09",
+    "endDate": "2024-01-14",
     "year": 2024
   }
 ]
