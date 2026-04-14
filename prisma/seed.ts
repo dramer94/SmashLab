@@ -30,6 +30,9 @@ async function main() {
         imageUrl: player.imageUrl || null,
         worldRanking: player.worldRanking || null,
         bio: player.bio || null,
+        isActive: (player as Record<string, unknown>).isActive !== undefined
+          ? Boolean((player as Record<string, unknown>).isActive)
+          : player.country === 'MAS',
       },
     })
     playerMap.set(player.slug, created.id)

@@ -24,6 +24,7 @@ interface PlayerSeed {
   worldRanking: number | null
   bio: NullableString
   imageUrl: NullableString
+  isActive: boolean
 }
 
 interface TournamentSeed {
@@ -272,6 +273,9 @@ function mapTournamentLevel(raw: string) {
   if (/Super 300/i.test(text)) return "Super 300"
   if (/Super 100/i.test(text)) return "Super 100"
   if (/World Tour Finals|Olympic|World Championships|World Championship/i.test(text)) return "Major"
+  if (/Asia Championships|Asian Championship|Badminton Asia/i.test(text)) return "Major"
+  if (/Europe Championships|European Championship|Badminton Europe/i.test(text)) return "Major"
+  if (/Thomas Cup|Uber Cup|Sudirman Cup|BWF Team/i.test(text)) return "Team"
   if (/Major/i.test(text)) return "Major"
 
   return text
@@ -446,7 +450,7 @@ async function fetchPlayerDetails(playerId: string, year: number, delayMs: numbe
   const search = new URLSearchParams({
     playerid: playerId,
     year: String(year),
-    level: "worldtour",
+    level: "worldtour",  // worldtour includes World/Regional Championships per badmintonstatistics.net
     category: "%",
     round: "%",
     country: "%",
@@ -602,10 +606,11 @@ function mergePlayerSeed(
     return slug
   }
 
+  const country = existing?.country ?? extracted.country
   const seed: PlayerSeed = {
     name: existing?.name ?? extracted.name,
     slug,
-    country: existing?.country ?? extracted.country,
+    country,
     birthDate: existing?.birthDate ?? null,
     height: existing?.height ?? null,
     playStyle: existing?.playStyle ?? null,
@@ -614,6 +619,7 @@ function mergePlayerSeed(
     worldRanking: existing?.worldRanking ?? null,
     bio: existing?.bio ?? null,
     imageUrl: existing?.imageUrl ?? null,
+    isActive: existing?.isActive ?? country === "MAS",
   }
 
   playersBySlug.set(slug, seed)
@@ -712,6 +718,41 @@ function sortMatches(matches: MatchSeed[]) {
   })
 }
 
+// Convert badmintonstatistics.net name format (e.g. "LEE Zii Jia", "Aaron CHIA") to Wikipedia search term
+function toWikipediaSearchName(name: string) {
+  // Names come in two formats:
+  // "LEE Zii Jia" → "Lee Zii Jia" (last name all caps followed by given name)
+  // "Aaron CHIA" → "Aaron Chia" (given name followed by all-caps last name)
+  const words = name.trim().split(/\s+/)
+  return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ")
+}
+
+// Wikipedia image name cache to avoid repeated lookups
+const wikiImageCache = new Map<string, string | null>()
+
+async function fetchWikipediaImage(playerName: string, delayMs: number): Promise<string | null> {
+  const searchName = toWikipediaSearchName(playerName)
+  if (wikiImageCache.has(searchName)) return wikiImageCache.get(searchName) ?? null
+
+  try {
+    const encodedTitle = encodeURIComponent(searchName.replace(/ /g, "_"))
+    const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodedTitle}&prop=pageimages&format=json&pithumbsize=400&redirects=1`
+    await sleep(delayMs)
+
+    const { stdout } = await execFileAsync("curl", ["-sS", "--max-time", "10", url], { maxBuffer: 1024 * 1024 })
+    const data = JSON.parse(stdout) as {
+      query: { pages: Record<string, { thumbnail?: { source: string } }> }
+    }
+    const pages = Object.values(data.query.pages)
+    const imageUrl = pages[0]?.thumbnail?.source ?? null
+    wikiImageCache.set(searchName, imageUrl)
+    return imageUrl
+  } catch {
+    wikiImageCache.set(searchName, null)
+    return null
+  }
+}
+
 async function loadJsonFile<T>(filePath: string) {
   return JSON.parse(await readFile(filePath, "utf8")) as T
 }
@@ -778,6 +819,20 @@ async function main() {
 
   const preservedTournaments = existingTournaments.filter((tournament) => tournament.year < startYear)
   const preservedMatches = existingMatches.filter((match) => Number(match.date.slice(0, 4)) < startYear)
+
+  // Fetch Wikipedia images for Malaysian players that don't have one yet
+  const masPlayers = [...playersBySlug.values()].filter((p) => p.country === "MAS" && (!p.imageUrl || p.imageUrl === "null"))
+  console.log(`Fetching Wikipedia images for ${masPlayers.length} Malaysian players without images...`)
+  let imagesFetched = 0
+  for (const player of masPlayers) {
+    const imageUrl = await fetchWikipediaImage(player.name, delayMs)
+    if (imageUrl) {
+      player.imageUrl = imageUrl
+      imagesFetched++
+      console.log(`  Image found: ${player.name}`)
+    }
+  }
+  console.log(`Wikipedia images: ${imagesFetched}/${masPlayers.length} found`)
 
   const nextPlayers = sortPlayers([...playersBySlug.values()])
   const nextTournaments = sortTournaments([
