@@ -305,13 +305,23 @@ export async function getSiteStats() {
   }
 }
 
-export async function getTournaments() {
+export async function getTournaments(year?: number) {
   return prisma.slTournament.findMany({
+    where: year ? { year } : undefined,
     orderBy: { startDate: 'desc' },
     include: {
       _count: { select: { matches: true } },
     },
   })
+}
+
+export async function getTournamentYears() {
+  const result = await prisma.slTournament.findMany({
+    select: { year: true },
+    distinct: ['year'],
+    orderBy: { year: 'desc' },
+  })
+  return result.map((r) => r.year)
 }
 
 export async function getTournamentBySlug(slug: string) {
