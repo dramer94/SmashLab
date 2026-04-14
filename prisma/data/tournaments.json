@@ -390,133 +390,323 @@
     "slug": "petronas-malaysia-open-2025"
   },
   {
-    "name": "BWF World Tour Finals 2024",
-    "slug": "bwf-world-tour-finals-2024",
+    "name": "HSBC BWF World Tour Finals 2024",
     "level": "Major",
     "location": "Hangzhou",
     "country": "China",
     "startDate": "2024-12-11",
     "endDate": "2024-12-15",
-    "year": 2024
+    "year": 2024,
+    "slug": "hsbc-bwf-world-tour-finals-2024"
   },
   {
-    "name": "Arctic Open 2024",
-    "slug": "arctic-open-2024",
+    "name": "Syed Modi India International 2024",
+    "level": "Super 300",
+    "location": "Lucknow",
+    "country": "India",
+    "startDate": "2024-11-26",
+    "endDate": "2024-12-01",
+    "year": 2024,
+    "slug": "syed-modi-india-international-2024"
+  },
+  {
+    "name": "LI-NING China Masters 2024",
+    "level": "Super 750",
+    "location": "Shenzhen",
+    "country": "China",
+    "startDate": "2024-11-19",
+    "endDate": "2024-11-24",
+    "year": 2024,
+    "slug": "li-ning-china-masters-2024"
+  },
+  {
+    "name": "Kumamoto Masters Japan 2024",
     "level": "Super 500",
-    "location": "Vantaa",
-    "country": "Finland",
+    "location": "Kumamoto",
+    "country": "Japan",
+    "startDate": "2024-11-12",
+    "endDate": "2024-11-17",
+    "year": 2024,
+    "slug": "kumamoto-masters-japan-2024"
+  },
+  {
+    "name": "Korea Masters 2024",
+    "level": "Super 300",
+    "location": "Iksan City",
+    "country": "Korea",
     "startDate": "2024-11-05",
     "endDate": "2024-11-10",
-    "year": 2024
+    "year": 2024,
+    "slug": "korea-masters-2024"
   },
   {
-    "name": "French Open 2024",
-    "slug": "french-open-2024",
-    "level": "Super 750",
-    "location": "Paris",
-    "country": "France",
-    "startDate": "2024-10-22",
-    "endDate": "2024-10-27",
-    "year": 2024
+    "name": "Hylo Open 2024",
+    "level": "Super 300",
+    "location": "Saarbrucken",
+    "country": "Germany",
+    "startDate": "2024-10-29",
+    "endDate": "2024-11-03",
+    "year": 2024,
+    "slug": "hylo-open-2024"
   },
   {
-    "name": "Denmark Open 2024",
-    "slug": "denmark-open-2024",
+    "name": "WONDR by BNI Indonesia Masters II 2024",
+    "level": "Super 100",
+    "location": "Surabaya",
+    "country": "Indonesia",
+    "startDate": "2024-10-29",
+    "endDate": "2024-11-03",
+    "year": 2024,
+    "slug": "wondr-by-bni-indonesia-masters-ii-2024"
+  },
+  {
+    "name": "VICTOR Denmark Open 2024",
     "level": "Super 750",
     "location": "Odense",
     "country": "Denmark",
     "startDate": "2024-10-15",
     "endDate": "2024-10-20",
-    "year": 2024
+    "year": 2024,
+    "slug": "victor-denmark-open-2024"
   },
   {
-    "name": "China Open 2024",
-    "slug": "china-open-2024",
+    "name": "VICTOR China Open 2024",
     "level": "Super 1000",
     "location": "Changzhou",
     "country": "China",
-    "startDate": "2024-09-10",
-    "endDate": "2024-09-15",
-    "year": 2024
+    "startDate": "2024-09-17",
+    "endDate": "2024-09-22",
+    "year": 2024,
+    "slug": "victor-china-open-2024"
   },
   {
-    "name": "Japan Open 2024",
-    "slug": "japan-open-2024",
+    "name": "LI-NING Hong Kong Open 2024",
+    "level": "Super 500",
+    "location": "Kowloon",
+    "country": "Hong Kong China",
+    "startDate": "2024-09-10",
+    "endDate": "2024-09-15",
+    "year": 2024,
+    "slug": "li-ning-hong-kong-open-2024"
+  },
+  {
+    "name": "YONEX-SUNRISE Vietnam Open 2024",
+    "level": "Super 100",
+    "location": "Ho Chi Minh City",
+    "country": "Vietnam",
+    "startDate": "2024-09-10",
+    "endDate": "2024-09-15",
+    "year": 2024,
+    "slug": "yonex-sunrise-vietnam-open-2024"
+  },
+  {
+    "name": "YONEX Taipei Open 2024",
+    "level": "Super 300",
+    "location": "Taipei",
+    "country": "Chinese Taipei",
+    "startDate": "2024-09-03",
+    "endDate": "2024-09-08",
+    "year": 2024,
+    "slug": "yonex-taipei-open-2024"
+  },
+  {
+    "name": "Korea Open 2024",
+    "level": "Super 500",
+    "location": "Seoul",
+    "country": "Korea",
+    "startDate": "2024-08-27",
+    "endDate": "2024-09-01",
+    "year": 2024,
+    "slug": "korea-open-2024"
+  },
+  {
+    "name": "WONDR by BNI Indonesia Masters 2024",
+    "level": "Super 100",
+    "location": "Pekanbaru",
+    "country": "Indonesia",
+    "startDate": "2024-08-27",
+    "endDate": "2024-09-01",
+    "year": 2024,
+    "slug": "wondr-by-bni-indonesia-masters-2024"
+  },
+  {
+    "name": "DAIHATSU Japan Open 2024",
     "level": "Super 750",
-    "location": "Osaka",
+    "location": "Yokohama Kanagawa",
     "country": "Japan",
     "startDate": "2024-08-20",
     "endDate": "2024-08-25",
-    "year": 2024
+    "year": 2024,
+    "slug": "daihatsu-japan-open-2024"
   },
   {
-    "name": "Paris Olympics 2024",
-    "slug": "paris-olympics-2024",
+    "name": "Paris 2024 Olympic Games Badminton Competition",
     "level": "Major",
     "location": "Paris",
     "country": "France",
     "startDate": "2024-07-27",
     "endDate": "2024-08-05",
-    "year": 2024
+    "year": 2024,
+    "slug": "paris-2024-olympic-games-badminton-competition"
   },
   {
-    "name": "Indonesia Open 2024",
-    "slug": "indonesia-open-2024",
+    "name": "SATHIO GROUP Australian Open 2024",
+    "level": "Super 500",
+    "location": "Sydney",
+    "country": "Australia",
+    "startDate": "2024-06-11",
+    "endDate": "2024-06-16",
+    "year": 2024,
+    "slug": "sathio-group-australian-open-2024"
+  },
+  {
+    "name": "KAPAL API Indonesia Open 2024",
     "level": "Super 1000",
     "location": "Jakarta",
     "country": "Indonesia",
     "startDate": "2024-06-04",
     "endDate": "2024-06-09",
-    "year": 2024
+    "year": 2024,
+    "slug": "kapal-api-indonesia-open-2024"
   },
   {
-    "name": "Singapore Open 2024",
-    "slug": "singapore-open-2024",
+    "name": "PERODUA Malaysia Masters 2024",
     "level": "Super 500",
-    "location": "Singapore",
-    "country": "Singapore",
-    "startDate": "2024-05-28",
-    "endDate": "2024-06-02",
-    "year": 2024
+    "location": "Kuala Lumpur",
+    "country": "Malaysia",
+    "startDate": "2024-05-21",
+    "endDate": "2024-05-26",
+    "year": 2024,
+    "slug": "perodua-malaysia-masters-2024"
   },
   {
-    "name": "Thailand Open 2024",
-    "slug": "thailand-open-2024",
+    "name": "TOYOTA Thailand Open 2024",
     "level": "Super 500",
     "location": "Bangkok",
     "country": "Thailand",
     "startDate": "2024-05-14",
     "endDate": "2024-05-19",
-    "year": 2024
+    "year": 2024,
+    "slug": "toyota-thailand-open-2024"
   },
   {
-    "name": "Korea Open 2024",
-    "slug": "korea-open-2024",
-    "level": "Super 500",
-    "location": "Seoul",
-    "country": "South Korea",
-    "startDate": "2024-04-02",
-    "endDate": "2024-04-07",
-    "year": 2024
+    "name": "TotalEnergies BWF Thomas & Uber Cup Finals 2024",
+    "level": "Team",
+    "location": "Chengdu",
+    "country": "China",
+    "startDate": "2024-04-29",
+    "endDate": "2024-05-05",
+    "year": 2024,
+    "slug": "totalenergies-bwf-thomas-uber-cup-finals-2024"
   },
   {
-    "name": "All England Open 2024",
-    "slug": "all-england-open-2024",
+    "name": "Madrid Spain Masters 2024 by IBERDROLA",
+    "level": "Super 300",
+    "location": "Madrid",
+    "country": "Spain",
+    "startDate": "2024-03-26",
+    "endDate": "2024-03-31",
+    "year": 2024,
+    "slug": "madrid-spain-masters-2024-by-iberdrola"
+  },
+  {
+    "name": "Ruichang China Masters 2024",
+    "level": "Super 100",
+    "location": "Ruichang",
+    "country": "China",
+    "startDate": "2024-03-19",
+    "endDate": "2024-03-24",
+    "year": 2024,
+    "slug": "ruichang-china-masters-2024"
+  },
+  {
+    "name": "YONEX Swiss Open 2024",
+    "level": "Super 300",
+    "location": "Basel",
+    "country": "Switzerland",
+    "startDate": "2024-03-19",
+    "endDate": "2024-03-24",
+    "year": 2024,
+    "slug": "yonex-swiss-open-2024"
+  },
+  {
+    "name": "Orleans Masters Badminton presented by VICTOR 2024",
+    "level": "Super 300",
+    "location": "Orleans",
+    "country": "France",
+    "startDate": "2024-03-12",
+    "endDate": "2024-03-17",
+    "year": 2024,
+    "slug": "orleans-masters-badminton-presented-by-victor-2024"
+  },
+  {
+    "name": "YONEX All England Open Badminton Championships 2024",
     "level": "Super 1000",
     "location": "Birmingham",
     "country": "England",
     "startDate": "2024-03-12",
     "endDate": "2024-03-17",
-    "year": 2024
+    "year": 2024,
+    "slug": "yonex-all-england-open-badminton-championships-2024"
   },
   {
-    "name": "Malaysia Open 2024",
-    "slug": "malaysia-open-2024",
+    "name": "YONEX French Open 2024",
+    "level": "Super 750",
+    "location": "Paris",
+    "country": "France",
+    "startDate": "2024-03-05",
+    "endDate": "2024-03-10",
+    "year": 2024,
+    "slug": "yonex-french-open-2024"
+  },
+  {
+    "name": "YONEX German Open 2024",
+    "level": "Super 300",
+    "location": "Mülheim an der Ruhr",
+    "country": "Germany",
+    "startDate": "2024-02-27",
+    "endDate": "2024-03-03",
+    "year": 2024,
+    "slug": "yonex-german-open-2024"
+  },
+  {
+    "name": "PRINCESS SIRIVANNAVARI Thailand Masters 2024",
+    "level": "Super 300",
+    "location": "Bangkok",
+    "country": "Thailand",
+    "startDate": "2024-01-30",
+    "endDate": "2024-02-04",
+    "year": 2024,
+    "slug": "princess-sirivannavari-thailand-masters-2024"
+  },
+  {
+    "name": "DAIHATSU Indonesia Masters 2024",
+    "level": "Super 500",
+    "location": "Jakarta",
+    "country": "Indonesia",
+    "startDate": "2024-01-23",
+    "endDate": "2024-01-28",
+    "year": 2024,
+    "slug": "daihatsu-indonesia-masters-2024"
+  },
+  {
+    "name": "YONEX SUNRISE India Open 2024",
+    "level": "Super 750",
+    "location": "New Delhi",
+    "country": "India",
+    "startDate": "2024-01-16",
+    "endDate": "2024-01-21",
+    "year": 2024,
+    "slug": "yonex-sunrise-india-open-2024"
+  },
+  {
+    "name": "PETRONAS Malaysia Open 2024",
     "level": "Super 1000",
     "location": "Kuala Lumpur",
     "country": "Malaysia",
     "startDate": "2024-01-09",
     "endDate": "2024-01-14",
-    "year": 2024
+    "year": 2024,
+    "slug": "petronas-malaysia-open-2024"
   }
 ]

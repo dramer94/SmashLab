@@ -275,7 +275,8 @@ function mapTournamentLevel(raw: string) {
   if (/World Tour Finals|Olympic|World Championships|World Championship/i.test(text)) return "Major"
   if (/Asia Championships|Asian Championship|Badminton Asia/i.test(text)) return "Major"
   if (/Europe Championships|European Championship|Badminton Europe/i.test(text)) return "Major"
-  if (/Thomas Cup|Uber Cup|Sudirman Cup|BWF Team/i.test(text)) return "Team"
+  if (/Thomas Cup|Uber Cup|Sudirman Cup|BWF Team|Grade 1 - Team/i.test(text)) return "Team"
+  if (/Olympic|Grade 1 - Individual/i.test(text)) return "Major"
   if (/Major/i.test(text)) return "Major"
 
   return text
