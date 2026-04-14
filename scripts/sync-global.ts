@@ -973,18 +973,18 @@ async function updateMatchCounts(): Promise<void> {
 
   await prisma.$executeRaw`
     UPDATE sl_player p
-    SET match_count = (
+    SET "matchCount" = (
       SELECT COUNT(*) FROM sl_match m
       WHERE m."player1Id" = p.id OR m."player2Id" = p.id
     )
   `
 
   await prisma.$executeRaw`
-    UPDATE sl_player SET "isActive" = true WHERE match_count >= 5
+    UPDATE sl_player SET "isActive" = true WHERE "matchCount" >= 5
   `
 
   await prisma.$executeRaw`
-    UPDATE sl_player SET "isActive" = false WHERE match_count < 5
+    UPDATE sl_player SET "isActive" = false WHERE "matchCount" < 5
   `
 
   console.log('Match counts updated.')
