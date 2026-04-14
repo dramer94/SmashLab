@@ -83,13 +83,10 @@ export default async function HomePage() {
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-12 mb-12">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
+            { label: "Total Players", value: stats.totalPlayers.toLocaleString() },
             { label: "Malaysian Players", value: stats.malaysianPlayers.toString() },
-            { label: "Tournaments", value: stats.tournaments.toString() },
-            { label: "Matches Recorded", value: stats.matches.toString() },
-            {
-              label: "Data Through",
-              value: stats.latestMatchDate ? formatDate(stats.latestMatchDate, { month: "short", day: "numeric", year: "numeric" }) : "N/A",
-            },
+            { label: "Tournaments", value: stats.tournaments.toLocaleString() },
+            { label: "Matches Recorded", value: stats.matches.toLocaleString() },
           ].map((stat) => (
             <div
               key={stat.label}

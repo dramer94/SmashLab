@@ -1,43 +1,103 @@
 import { Metadata } from "next"
-import { getAllPlayers } from "@/lib/queries"
-import { PlayerCard } from "@/components/player-card"
+import { getAllPlayersGlobal, getMalaysianPlayers } from '@/lib/queries'
+import { PlayerCard } from '@/components/player-card'
+import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: "Players",
-  description: "All badminton players tracked on SmashLab. Malaysian players and their top international opponents.",
+  description: "Browse badminton player profiles from around the world. Stats, head-to-head records, and tournament performance.",
 }
 
-export default async function PlayersPage() {
-  const players = await getAllPlayers()
-  const malaysianPlayers = players.filter(p => p.country === 'MAS')
-  const internationalPlayers = players.filter(p => p.country !== 'MAS')
+interface PageProps {
+  searchParams: Promise<{ country?: string; category?: string; q?: string; page?: string }>
+}
+
+export default async function PlayersPage({ searchParams }: PageProps) {
+  const params = await searchParams
+  const country = params.country
+  const category = params.category
+  const search = params.q
+  const page = parseInt(params.page || '1')
+
+  const [result, malaysianPlayers] = await Promise.all([
+    getAllPlayersGlobal({ country, category, search, page, limit: 48 }),
+    !country && !search ? getMalaysianPlayers() : Promise.resolve([]),
+  ])
+
+  const categories = ['MS', 'WS', 'MD', 'WD', 'XD']
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
-      <h1 className="text-3xl font-bold text-white mb-2">Players</h1>
-      <p className="text-gray-400 mb-10">Browse player profiles, stats, and head-to-head records</p>
-
-      {/* Malaysian Players */}
-      <div className="mb-12">
-        <h2 className="text-xl font-semibold text-blue-400 mb-4 flex items-center gap-2">
-          <span className="text-2xl">{'\u{1F1F2}\u{1F1FE}'}</span> Malaysian Players
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {malaysianPlayers.map((player) => (
-            <PlayerCard key={player.id} player={player} />
-          ))}
-        </div>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-white">Players</h1>
+        <p className="text-gray-400 mt-1">
+          {result.total.toLocaleString()} players from across the international circuit
+        </p>
       </div>
 
-      {/* International Players */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-300 mb-4">International Opponents</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {internationalPlayers.map((player) => (
-            <PlayerCard key={player.id} player={player} />
-          ))}
-        </div>
+      {/* Category filter tabs */}
+      <div className="flex gap-2 mb-6 flex-wrap">
+        <Link href={`/players${country ? `?country=${country}` : ''}`}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!category ? 'bg-blue-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}>
+          All
+        </Link>
+        {categories.map(cat => (
+          <Link key={cat} href={`/players?category=${cat}${country ? `&country=${country}` : ''}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${category === cat ? 'bg-blue-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}>
+            {cat}
+          </Link>
+        ))}
       </div>
+
+      {/* Malaysian spotlight — only when no filters */}
+      {malaysianPlayers.length > 0 && (
+        <section className="mb-12">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-2xl">🇲🇾</span>
+            <h2 className="text-xl font-bold text-white">Malaysian Players</h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+            {malaysianPlayers.map(p => <PlayerCard key={p.id} player={p} />)}
+          </div>
+        </section>
+      )}
+
+      {/* Global players grid */}
+      <section>
+        {(country || category || search) && (
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-white">
+              {country ? `${country} Players` : category ? `${category} Players` : 'Search Results'}
+            </h2>
+            <Link href="/players" className="text-sm text-blue-400 hover:text-blue-300">Clear filters</Link>
+          </div>
+        )}
+        {!country && !category && !search && (
+          <h2 className="text-xl font-bold text-white mb-4">All Players</h2>
+        )}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+          {result.players.map(p => <PlayerCard key={p.id} player={p} />)}
+        </div>
+
+        {/* Pagination */}
+        {result.pages > 1 && (
+          <div className="flex justify-center gap-2 mt-8">
+            {page > 1 && (
+              <Link href={`/players?page=${page-1}${country?`&country=${country}`:''}${category?`&category=${category}`:''}${search?`&q=${search}`:''}`}
+                className="px-4 py-2 bg-white/10 rounded-lg text-white hover:bg-white/20">
+                &larr; Prev
+              </Link>
+            )}
+            <span className="px-4 py-2 text-gray-400">Page {page} of {result.pages}</span>
+            {page < result.pages && (
+              <Link href={`/players?page=${page+1}${country?`&country=${country}`:''}${category?`&category=${category}`:''}${search?`&q=${search}`:''}`}
+                className="px-4 py-2 bg-white/10 rounded-lg text-white hover:bg-white/20">
+                Next &rarr;
+              </Link>
+            )}
+          </div>
+        )}
+      </section>
     </div>
   )
 }

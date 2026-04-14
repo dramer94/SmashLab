@@ -24,9 +24,15 @@ model SlPlayer {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  externalId   String?   @unique  // playerid from badmintonstatistics.net
+  matchCount   Int       @default(0)
+
   matchesAsPlayer1 SlMatch[] @relation("Player1Matches")
   matchesAsPlayer2 SlMatch[] @relation("Player2Matches")
 
+  @@index([country])
+  @@index([worldRanking])
+  @@index([matchCount])
   @@map("sl_player")
 }
 
@@ -42,8 +48,14 @@ model SlTournament {
   year      Int
   createdAt DateTime  @default(now())
 
+  externalId    String?   @unique  // GUID from badmintonstatistics.net
+  lastScrapedAt DateTime?
+
   matches SlMatch[]
 
+  @@index([year])
+  @@index([level])
+  @@index([externalId])
   @@map("sl_tournament")
 }
 
@@ -66,5 +78,24 @@ model SlMatch {
   durationMin    Int?
   createdAt      DateTime     @default(now())
 
+  @@index([player1Id, date])
+  @@index([player2Id, date])
+  @@index([tournamentId])
   @@map("sl_match")
+}
+
+model SlSyncLog {
+  id                String    @id @default(cuid())
+  startedAt         DateTime  @default(now())
+  completedAt       DateTime?
+  mode              String    // "full" | "incremental"
+  status            String    // "running" | "success" | "error"
+  yearsRange        String?   // e.g. "1990-2026"
+  tournamentsTotal  Int       @default(0)
+  tournamentsNew    Int       @default(0)
+  matchesAdded      Int       @default(0)
+  playersDiscovered Int       @default(0)
+  errorMessage      String?
+
+  @@map("sl_sync_log")
 }
