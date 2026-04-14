@@ -81,9 +81,9 @@ export default async function HomePage() {
 
       {/* Quick Stats */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-12 mb-12">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
           {[
-            { label: "Total Players", value: stats.totalPlayers.toLocaleString() },
+            { label: "Active Players", value: stats.totalPlayers.toLocaleString() },
             { label: "Malaysian Players", value: stats.malaysianPlayers.toString() },
             { label: "Tournaments", value: stats.tournaments.toLocaleString() },
             { label: "Matches Recorded", value: stats.matches.toLocaleString() },
@@ -97,6 +97,11 @@ export default async function HomePage() {
             </div>
           ))}
         </div>
+        {stats.latestMatchDate && (
+          <p className="text-center text-xs text-gray-500">
+            Data through {formatDate(stats.latestMatchDate)} · Updates weekly
+          </p>
+        )}
       </section>
     </div>
   )
