@@ -30,12 +30,35 @@ export default async function PlayersPage({ searchParams }: PageProps) {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold text-white">Players</h1>
         <p className="text-gray-400 mt-1">
           {result.total.toLocaleString()} players from across the international circuit
         </p>
       </div>
+
+      {/* Search bar */}
+      <form method="GET" action="/players" className="mb-6">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            name="q"
+            defaultValue={search}
+            placeholder="Search players by name..."
+            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:bg-white/10"
+          />
+          {country && <input type="hidden" name="country" value={country} />}
+          {category && <input type="hidden" name="category" value={category} />}
+          <button type="submit" className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors">
+            Search
+          </button>
+          {search && (
+            <Link href="/players" className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-gray-300 rounded-lg transition-colors">
+              Clear
+            </Link>
+          )}
+        </div>
+      </form>
 
       {/* Category filter tabs */}
       <div className="flex gap-2 mb-6 flex-wrap">
