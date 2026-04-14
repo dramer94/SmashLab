@@ -507,12 +507,15 @@ function parsePlayerTableRows(html: string): DiscoveredPlayer[] {
 }
 
 function parseTournamentMetadata(html: string): ScrapedTournamentMeta | null {
-  const nameMatch = html.match(/Tournament Name:<\/b>\s*([^<]+)<br/i)
-  const dateMatch = html.match(/Tournament Dates:<\/b>\s*([^<]+)<br/i)
+  // Some tournaments use <b>Tournament Name:</b>, others use <h4>Name</h4>
+  const nameMatch =
+    html.match(/Tournament Name:<\/b>\s*([^<]+)<br/i) ??
+    html.match(/<h4>([^<]+)<\/h4>/i)
+  const dateMatch = html.match(/Tournament Dates?:<\/b>\s*([^<]+)<br/i)
   const locationMatch = html.match(/Location:<\/b>\s*([^<]+)<br/i)
   const categoryMatch = html.match(/Category:<\/b>\s*([^<\n]+)/i)
 
-  if (!nameMatch || !dateMatch || !locationMatch || !categoryMatch) return null
+  if (!nameMatch || !dateMatch || !locationMatch) return null
 
   const name = cleanText(nameMatch[1])
   const dates = parseSlashDateRange(cleanText(dateMatch[1]))
@@ -522,7 +525,8 @@ function parseTournamentMetadata(html: string): ScrapedTournamentMeta | null {
   const locationParts = locationValue.split(',').map((p) => p.trim()).filter(Boolean)
   const country = locationParts[0] ?? null
   const location = locationParts.slice(1).join(', ') || null
-  const level = mapTournamentLevel(categoryMatch[1])
+  const rawCategory = categoryMatch ? categoryMatch[1] : ''
+  const level = mapTournamentLevel(rawCategory)
   const year = Number(dates.startDate.slice(0, 4))
 
   return { name, level, location, country, startDate: dates.startDate, endDate: dates.endDate, year }
