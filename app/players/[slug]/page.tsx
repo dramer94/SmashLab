@@ -1,7 +1,6 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import Link from "next/link"
-import { prisma } from "@/lib/prisma"
 import {
   getPlayerBySlug,
   getPlayerStats,
@@ -13,6 +12,8 @@ import {
 import { formatDate } from "@/lib/utils"
 import { FormChart } from "@/components/form-chart"
 import { MatchResultRow } from "@/components/match-result-row"
+
+export const dynamic = 'force-dynamic'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -31,13 +32,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: `${player.name} badminton stats - win rate, head-to-head records, form trend.`,
     },
   }
-}
-
-export async function generateStaticParams() {
-  const players = await prisma.slPlayer.findMany({
-    select: { slug: true },
-  })
-  return players.map((p) => ({ slug: p.slug }))
 }
 
 export default async function PlayerPage({ params }: Props) {
