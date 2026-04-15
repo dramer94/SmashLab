@@ -560,6 +560,17 @@ export interface GenerationSummary {
     imageUrl: string | null
     isActive: boolean
     matchCount: number
+    titles?: number
+    wins?: number
+    winRate?: number
+  }[]
+  disciplineStats?: {
+    category: string
+    playerCount: number
+    titles: number
+    totalMatches: number
+    wins: number
+    winRate: number
   }[]
 }
 
@@ -696,16 +707,61 @@ export async function getGenerationBySlug(slug: string): Promise<GenerationSumma
   `
   if (!rows[0]) return null
 
-  // For detail page: get ALL players (not just 6)
-  type PlayerRow = { id: string; name: string; slug: string; country: string; category: string; worldRanking: number | null; imageUrl: string | null; isActive: boolean; matchCount: number }
+  // For detail page: get ALL players with individual titles + win rate
+  type PlayerRow = {
+    id: string; name: string; slug: string; country: string; category: string
+    worldRanking: number | null; imageUrl: string | null; isActive: boolean; matchCount: number
+    titles: number; wins: number; winRate: number
+  }
   const allPlayers = await prisma.$queryRaw<PlayerRow[]>`
-    SELECT p.id, p.name, p.slug, p.country, p.category, p."worldRanking", p."imageUrl", p."isActive", p."matchCount"
+    SELECT
+      p.id, p.name, p.slug, p.country, p.category,
+      p."worldRanking", p."imageUrl", p."isActive", p."matchCount",
+      COUNT(CASE WHEN m.round = 'F' AND m."winnerId" = p.id THEN 1 END)::int AS titles,
+      COUNT(CASE WHEN m."winnerId" = p.id THEN 1 END)::int AS wins,
+      CASE WHEN COUNT(m.id) > 0
+        THEN ROUND(COUNT(CASE WHEN m."winnerId" = p.id THEN 1 END)::numeric / COUNT(m.id) * 100)::int
+        ELSE 0 END AS "winRate"
     FROM sl_player p
     JOIN sl_generation_player gp ON gp."playerId" = p.id
+    LEFT JOIN sl_match m ON (m."player1Id" = p.id OR m."player2Id" = p.id)
     WHERE gp."generationId" = ${genId} AND gp."isPrimary" = true
+    GROUP BY p.id, p.name, p.slug, p.country, p.category, p."worldRanking", p."imageUrl", p."isActive", p."matchCount"
     ORDER BY p."matchCount" DESC
   `
-  return { ...rows[0], players: allPlayers }
+
+  // Per-discipline aggregate stats
+  type DisciplineStat = {
+    category: string; playerCount: number; titles: number
+    totalMatches: number; wins: number; winRate: number
+  }
+  const disciplineStats = await prisma.$queryRaw<DisciplineStat[]>`
+    SELECT
+      p.category,
+      COUNT(DISTINCT p.id)::int                                                          AS "playerCount",
+      SUM(COUNT(CASE WHEN m.round = 'F' AND m."winnerId" = p.id THEN 1 END)) OVER (PARTITION BY p.category)::int AS titles,
+      SUM(COUNT(m.id)) OVER (PARTITION BY p.category)::int                              AS "totalMatches",
+      SUM(COUNT(CASE WHEN m."winnerId" = p.id THEN 1 END)) OVER (PARTITION BY p.category)::int AS wins,
+      CASE WHEN SUM(COUNT(m.id)) OVER (PARTITION BY p.category) > 0
+        THEN ROUND(SUM(COUNT(CASE WHEN m."winnerId" = p.id THEN 1 END)) OVER (PARTITION BY p.category)::numeric
+               / SUM(COUNT(m.id)) OVER (PARTITION BY p.category) * 100)::int
+        ELSE 0 END AS "winRate"
+    FROM sl_player p
+    JOIN sl_generation_player gp ON gp."playerId" = p.id AND gp."generationId" = ${genId} AND gp."isPrimary" = true
+    LEFT JOIN sl_match m ON (m."player1Id" = p.id OR m."player2Id" = p.id)
+    GROUP BY p.category, p.id
+    ORDER BY CASE p.category WHEN 'MS' THEN 1 WHEN 'WS' THEN 2 WHEN 'MD' THEN 3 WHEN 'WD' THEN 4 WHEN 'XD' THEN 5 END
+  `
+
+  // Collapse duplicate category rows from the window function approach
+  const seenCats = new Set<string>()
+  const disciplineStatsUniq = disciplineStats.filter(d => {
+    if (seenCats.has(d.category)) return false
+    seenCats.add(d.category)
+    return true
+  })
+
+  return { ...rows[0], players: allPlayers, disciplineStats: disciplineStatsUniq }
 }
 
 export async function getPlayerGeneration(playerId: string): Promise<{ slug: string; label: string; country: string } | null> {
