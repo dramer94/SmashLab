@@ -84,6 +84,21 @@ model SlMatch {
   @@map("sl_match")
 }
 
+model SlExternalStat {
+  id         String   @id @default(cuid())
+  source     String   // "HOF" | "Reports"
+  reportName String
+  category   String   @default("%")
+  level      String   @default("worldtour")
+  year       String   @default("-1")
+  headers    String[]
+  rows       Json     // array of {cells: string[]}
+  scrapedAt  DateTime @default(now())
+
+  @@unique([reportName, category, level, year])
+  @@map("sl_external_stat")
+}
+
 model SlSyncLog {
   id                String    @id @default(cuid())
   startedAt         DateTime  @default(now())

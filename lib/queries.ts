@@ -399,6 +399,30 @@ export async function getCountryWins() {
   `
 }
 
+export type ExternalStatRow = {
+  id: string; source: string; reportName: string; category: string
+  headers: string[]; rows: { cells: string[] }[]
+}
+
+export async function getExternalStat(reportName: string, category = '%'): Promise<ExternalStatRow | null> {
+  const rows = await prisma.$queryRaw<ExternalStatRow[]>`
+    SELECT id, source, "reportName", category, headers, rows
+    FROM sl_external_stat
+    WHERE "reportName" = ${reportName}
+      AND category = ${category}
+    LIMIT 1
+  `
+  return rows[0] ?? null
+}
+
+export async function getAllExternalStats(): Promise<ExternalStatRow[]> {
+  return prisma.$queryRaw<ExternalStatRow[]>`
+    SELECT id, source, "reportName", category, headers, rows
+    FROM sl_external_stat
+    ORDER BY source, "reportName", category
+  `
+}
+
 export async function getThreeSetStats() {
   type ThreeSetRow = { category: string; total: number; three_set: number }
   return prisma.$queryRaw<ThreeSetRow[]>`
