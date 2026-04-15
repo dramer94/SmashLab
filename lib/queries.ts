@@ -455,6 +455,71 @@ export async function getMostTitlesInAYear() {
   `
 }
 
+// ── Olympics ──────────────────────────────────────────────────────────────────
+
+export async function getOlympicMedalTable() {
+  type Row = { noc: string; gold: number; silver: number; bronze: number; total: number }
+  return prisma.$queryRaw<Row[]>`
+    SELECT noc,
+      SUM(CASE WHEN medal = 'Gold' THEN 1 ELSE 0 END)::int as gold,
+      SUM(CASE WHEN medal = 'Silver' THEN 1 ELSE 0 END)::int as silver,
+      SUM(CASE WHEN medal = 'Bronze' THEN 1 ELSE 0 END)::int as bronze,
+      SUM(CASE WHEN medal IN ('Gold','Silver','Bronze') THEN 1 ELSE 0 END)::int as total
+    FROM sl_olympic_medal
+    WHERE medal IS NOT NULL
+    GROUP BY noc
+    ORDER BY gold DESC, silver DESC, bronze DESC
+  `
+}
+
+export async function getOlympicMedals(year?: number, discipline?: string) {
+  type Row = { year: number; city: string; discipline: string; position: string; playerName: string; noc: string; medal: string }
+  if (year && discipline) {
+    return prisma.$queryRaw<Row[]>`
+      SELECT year, city, discipline, position, "playerName", noc, medal
+      FROM sl_olympic_medal
+      WHERE year = ${year} AND discipline = ${discipline}
+      ORDER BY position
+    `
+  }
+  if (year) {
+    return prisma.$queryRaw<Row[]>`
+      SELECT year, city, discipline, position, "playerName", noc, medal
+      FROM sl_olympic_medal WHERE year = ${year} ORDER BY discipline, position
+    `
+  }
+  return prisma.$queryRaw<Row[]>`
+    SELECT year, city, discipline, position, "playerName", noc, medal
+    FROM sl_olympic_medal ORDER BY year DESC, discipline, position
+  `
+}
+
+export async function getOlympicYears() {
+  type Row = { year: number; city: string }
+  return prisma.$queryRaw<Row[]>`
+    SELECT DISTINCT year, city FROM sl_olympic_event ORDER BY year DESC
+  `
+}
+
+export async function getOlympicMatches(year: number, discipline: string) {
+  type Row = {
+    round: string; player1Name: string; player1NOC: string
+    player2Name: string; player2NOC: string; score: string
+    winnerName: string; walkover: boolean
+  }
+  return prisma.$queryRaw<Row[]>`
+    SELECT round, "player1Name", "player1NOC", "player2Name", "player2NOC",
+      score, "winnerName", walkover
+    FROM sl_olympic_match
+    WHERE year = ${year} AND discipline = ${discipline}
+    ORDER BY
+      CASE round
+        WHEN 'Group' THEN 1 WHEN 'R1' THEN 2 WHEN 'R32' THEN 3 WHEN 'R16' THEN 4
+        WHEN 'QF' THEN 5 WHEN 'SF' THEN 6 WHEN 'Bronze' THEN 7 WHEN 'F' THEN 8
+        ELSE 0 END
+  `
+}
+
 export async function getThreeSetStats() {
   type ThreeSetRow = { category: string; total: number; three_set: number }
   return prisma.$queryRaw<ThreeSetRow[]>`

@@ -11,6 +11,7 @@ const navLinks = [
   { href: "/tournaments", label: "Tournaments" },
   { href: "/stats", label: "Records" },
   { href: "/head-to-head", label: "H2H" },
+  { href: "/olympics", label: "Olympics" },
 ]
 
 export function Nav() {
