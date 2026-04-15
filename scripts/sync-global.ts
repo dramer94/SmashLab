@@ -249,7 +249,8 @@ interface TournamentSearchResult {
 const SEARCH_TERMS = [
   'International', 'Open', 'Championship', 'Masters',
   'Cup', 'Grand', 'Series', 'World', 'Thomas', 'Sudirman',
-  'All England', 'Olympic', 'Korea', 'China', 'Japan', 'India',
+  'All England', 'Olympic', 'European', 'Asian', 'Pan American',
+  'Korea', 'China', 'Japan', 'India',
   'Final', 'Super', 'Tour', 'Invitation',
   'Malaysia', 'Indonesia', 'Thailand', 'Singapore', 'Vietnam',
   'Denmark', 'Germany', 'France', 'Spain', 'Swiss', 'Dutch',

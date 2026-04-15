@@ -116,16 +116,16 @@ function detectRound(headerText: string): string {
   return 'Group'
 }
 
-// Is this a match result table? (has "Competitor" and "Result" columns)
+// Is this a match result table? (has "Competitor"/"Pair" and "Result" columns)
 function isMatchTable(headers: string[]): boolean {
   const joined = headers.join(' ').toLowerCase()
-  return joined.includes('result') && joined.includes('competitor')
+  return joined.includes('result') && (joined.includes('competitor') || joined.includes('pair'))
 }
 
-// Is this a medal/standings table? (has "Pos" and "Competitor" and "NOC")
+// Is this a medal/standings table? (has "Pos" and "Competitor"/"Pair" and "NOC")
 function isMedalTable(headers: string[]): boolean {
   const joined = headers.join(' ').toLowerCase()
-  return joined.includes('pos') && joined.includes('competitor') && joined.includes('noc') && !joined.includes('result')
+  return joined.includes('pos') && (joined.includes('competitor') || joined.includes('pair')) && joined.includes('noc') && !joined.includes('result')
 }
 
 // Parse a match row → { p1Name, p1NOC, score, p2Name, p2NOC, walkover }
@@ -172,6 +172,10 @@ function parseMatchRow(row: string[]): {
   } else if (scoreIdx + 1 < row.length) {
     p2Name = row[scoreIdx + 1]
   }
+
+  // Strip seed annotations like "(1)", "(2)" from player/pair names
+  p1Name = p1Name.replace(/\s*\(\d+\)\s*$/, '').trim()
+  p2Name = p2Name.replace(/\s*\(\d+\)\s*$/, '').trim()
 
   if (!p1Name || !p2Name) return null
   return { p1Name, p1NOC, score, p2Name, p2NOC, walkover }
