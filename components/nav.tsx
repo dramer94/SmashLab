@@ -9,8 +9,8 @@ const navLinks = [
   { href: "/players", label: "Players" },
   { href: "/countries", label: "Countries" },
   { href: "/tournaments", label: "Tournaments" },
+  { href: "/stats", label: "Records" },
   { href: "/head-to-head", label: "H2H" },
-  { href: "/compare", label: "Compare" },
 ]
 
 export function Nav() {

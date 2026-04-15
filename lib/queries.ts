@@ -321,3 +321,94 @@ export async function getTournamentBySlug(slug: string) {
     },
   })
 }
+
+// ── Stats / Records ──────────────────────────────────────────────
+
+export async function getCareerMatchLeaders() {
+  return prisma.slPlayer.findMany({
+    where: { isActive: true, matchCount: { gte: 100 } },
+    orderBy: { matchCount: 'desc' },
+    take: 15,
+    select: { id: true, name: true, slug: true, country: true, category: true, matchCount: true },
+  })
+}
+
+export async function getCareerWinLeaders() {
+  type WinRow = { id: string; name: string; slug: string; country: string; category: string; total: number; wins: number }
+  const rows = await prisma.$queryRaw<WinRow[]>`
+    SELECT p.id, p.name, p.slug, p.country, p.category,
+      p."matchCount" as total,
+      SUM(CASE WHEN m."winnerId" = p.id THEN 1 ELSE 0 END)::int as wins
+    FROM sl_player p
+    JOIN sl_match m ON (m."player1Id" = p.id OR m."player2Id" = p.id)
+    WHERE p."matchCount" >= 100 AND m."winnerId" IS NOT NULL AND p."isActive" = true
+    GROUP BY p.id, p.name, p.slug, p.country, p.category, p."matchCount"
+    ORDER BY wins DESC
+    LIMIT 15
+  `
+  return rows.map(r => ({ ...r, winRate: r.total > 0 ? Math.round((r.wins / r.total) * 100) : 0 }))
+}
+
+export async function getTitleLeaders() {
+  type TitleRow = { id: string; name: string; slug: string; country: string; titles: number }
+  return prisma.$queryRaw<TitleRow[]>`
+    SELECT p.id, p.name, p.slug, p.country, COUNT(*)::int as titles
+    FROM sl_match m
+    JOIN sl_player p ON p.id = m."winnerId"
+    WHERE m.round = 'F' AND m."winnerId" IS NOT NULL AND p."isActive" = true
+    GROUP BY p.id, p.name, p.slug, p.country
+    ORDER BY titles DESC
+    LIMIT 15
+  `
+}
+
+export async function getGreatestRivalries() {
+  type RivalryRow = {
+    pid1: string; pid2: string; matches: number
+    name1: string; slug1: string; country1: string
+    name2: string; slug2: string; country2: string
+  }
+  return prisma.$queryRaw<RivalryRow[]>`
+    SELECT
+      LEAST(m."player1Id", m."player2Id") as pid1,
+      GREATEST(m."player1Id", m."player2Id") as pid2,
+      COUNT(*)::int as matches,
+      p1.name as name1, p1.slug as slug1, p1.country as country1,
+      p2.name as name2, p2.slug as slug2, p2.country as country2
+    FROM sl_match m
+    JOIN sl_player p1 ON p1.id = LEAST(m."player1Id", m."player2Id")
+    JOIN sl_player p2 ON p2.id = GREATEST(m."player1Id", m."player2Id")
+    WHERE m."winnerId" IS NOT NULL
+    GROUP BY LEAST(m."player1Id", m."player2Id"), GREATEST(m."player1Id", m."player2Id"),
+      p1.name, p1.slug, p1.country, p2.name, p2.slug, p2.country
+    ORDER BY matches DESC
+    LIMIT 15
+  `
+}
+
+export async function getCountryWins() {
+  type CountryRow = { country: string; wins: number }
+  return prisma.$queryRaw<CountryRow[]>`
+    SELECT p.country, COUNT(*)::int as wins
+    FROM sl_match m
+    JOIN sl_player p ON p.id = m."winnerId"
+    WHERE m."winnerId" IS NOT NULL
+    GROUP BY p.country
+    ORDER BY wins DESC
+    LIMIT 20
+  `
+}
+
+export async function getThreeSetStats() {
+  type ThreeSetRow = { category: string; total: number; three_set: number }
+  return prisma.$queryRaw<ThreeSetRow[]>`
+    SELECT
+      category,
+      COUNT(*)::int as total,
+      SUM(CASE WHEN array_length(string_to_array(score, ' '), 1) >= 3 THEN 1 ELSE 0 END)::int as three_set
+    FROM sl_match
+    WHERE "walkover" = false AND score IS NOT NULL AND score != '' AND "winnerId" IS NOT NULL
+    GROUP BY category
+    ORDER BY category
+  `
+}

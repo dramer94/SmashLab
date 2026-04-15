@@ -36,6 +36,12 @@ export default async function HomePage() {
               Explore Players
             </Link>
             <Link
+              href="/stats"
+              className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/20"
+            >
+              All-Time Records
+            </Link>
+            <Link
               href="/countries"
               className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/20"
             >
