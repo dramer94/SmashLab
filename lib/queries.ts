@@ -423,6 +423,38 @@ export async function getAllExternalStats(): Promise<ExternalStatRow[]> {
   `
 }
 
+export async function getMostWinsInAYear() {
+  type Row = { id: string; name: string; slug: string; country: string; category: string; year: number; wins: number }
+  return prisma.$queryRaw<Row[]>`
+    SELECT p.id, p.name, p.slug, p.country, p.category,
+      EXTRACT(YEAR FROM m.date)::int as year,
+      COUNT(*)::int as wins
+    FROM sl_match m
+    JOIN sl_player p ON p.id = m."winnerId"
+    WHERE m."winnerId" IS NOT NULL AND p."isActive" = true
+    GROUP BY p.id, p.name, p.slug, p.country, p.category, EXTRACT(YEAR FROM m.date)
+    HAVING COUNT(*) >= 20
+    ORDER BY wins DESC
+    LIMIT 15
+  `
+}
+
+export async function getMostTitlesInAYear() {
+  type Row = { id: string; name: string; slug: string; country: string; year: number; titles: number }
+  return prisma.$queryRaw<Row[]>`
+    SELECT p.id, p.name, p.slug, p.country,
+      EXTRACT(YEAR FROM m.date)::int as year,
+      COUNT(*)::int as titles
+    FROM sl_match m
+    JOIN sl_player p ON p.id = m."winnerId"
+    WHERE m."winnerId" IS NOT NULL AND m.round = 'F' AND p."isActive" = true
+    GROUP BY p.id, p.name, p.slug, p.country, EXTRACT(YEAR FROM m.date)
+    HAVING COUNT(*) >= 5
+    ORDER BY titles DESC
+    LIMIT 15
+  `
+}
+
 export async function getThreeSetStats() {
   type ThreeSetRow = { category: string; total: number; three_set: number }
   return prisma.$queryRaw<ThreeSetRow[]>`

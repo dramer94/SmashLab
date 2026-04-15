@@ -9,6 +9,8 @@ import {
   getThreeSetStats,
   getSiteStats,
   getExternalStat,
+  getMostWinsInAYear,
+  getMostTitlesInAYear,
   type ExternalStatRow,
 } from "@/lib/queries"
 import { getFlag } from "@/lib/utils"
@@ -84,6 +86,7 @@ export default async function StatsPage() {
   const [
     matchLeaders, winLeaders, titleLeaders,
     rivalries, countryWins, threeSetStats, siteStats,
+    winsInYear, titlesInYear,
     // External stats from badmintonstatistics.net
     winsAll, winsMS, winsWS,
     firstSetWins, firstSetLosses,
@@ -98,7 +101,9 @@ export default async function StatsPage() {
     getCountryWins(),
     getThreeSetStats(),
     getSiteStats(),
-    // External
+    getMostWinsInAYear(),
+    getMostTitlesInAYear(),
+    // External (scraped from badmintonstatistics.net — available if IP not blocked)
     getExternalStat('PlayerWinsAndLosses', '%'),
     getExternalStat('PlayerWinsAndLosses', 'MS'),
     getExternalStat('PlayerWinsAndLosses', 'WS'),
@@ -189,6 +194,45 @@ export default async function StatsPage() {
                   <div className="text-sm font-medium text-white truncate">{p.name}</div>
                 </div>
                 <span className="text-sm font-bold text-yellow-400 shrink-0">{Number(p.titles)} 🏆</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Single-Season Records ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-14">
+        <div>
+          <SectionHeader title="Most Match Wins in a Season" sub="Best single-year win totals (min. 20 wins)" />
+          <div className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
+            {winsInYear.map((p, i) => (
+              <Link key={`${p.id}-${p.year}`} href={`/players/${p.slug}`}
+                className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
+                <span className="text-sm font-mono text-gray-500 w-5 shrink-0">{i + 1}</span>
+                <span className="text-base shrink-0">{getFlag(p.country)}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-white truncate">{p.name}</div>
+                  <div className="text-xs text-gray-500">{p.year} · {p.category}</div>
+                </div>
+                <span className="text-sm font-bold text-green-400 shrink-0">{p.wins} wins</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <SectionHeader title="Most Tournament Titles in a Season" sub="Best single-year title hauls (min. 5 titles)" />
+          <div className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
+            {titlesInYear.map((p, i) => (
+              <Link key={`${p.id}-${p.year}`} href={`/players/${p.slug}`}
+                className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
+                <span className="text-sm font-mono text-gray-500 w-5 shrink-0">{i + 1}</span>
+                <span className="text-base shrink-0">{getFlag(p.country)}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-white truncate">{p.name}</div>
+                  <div className="text-xs text-gray-500">{p.year}</div>
+                </div>
+                <span className="text-sm font-bold text-yellow-400 shrink-0">{p.titles} 🏆</span>
               </Link>
             ))}
           </div>
