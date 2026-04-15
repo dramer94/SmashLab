@@ -717,14 +717,31 @@ export async function getGenerationBySlug(slug: string): Promise<GenerationSumma
     SELECT
       p.id, p.name, p.slug, p.country, p.category,
       p."worldRanking", p."imageUrl", p."isActive", p."matchCount",
-      COUNT(CASE WHEN m.round = 'F' AND m."winnerId" = p.id THEN 1 END)::int AS titles,
-      COUNT(CASE WHEN m."winnerId" = p.id THEN 1 END)::int AS wins,
+      -- Count titles: either primary player wins OR won as partner (partner text on winning side)
+      COUNT(CASE WHEN m.round = 'F' AND (
+        m."winnerId" = p.id
+        OR (m."winnerId" = m."player1Id" AND m."player1Partner" = p.name)
+        OR (m."winnerId" = m."player2Id" AND m."player2Partner" = p.name)
+      ) THEN 1 END)::int AS titles,
+      COUNT(CASE WHEN
+        m."winnerId" = p.id
+        OR (m."winnerId" = m."player1Id" AND m."player1Partner" = p.name)
+        OR (m."winnerId" = m."player2Id" AND m."player2Partner" = p.name)
+      THEN 1 END)::int AS wins,
       CASE WHEN COUNT(m.id) > 0
-        THEN ROUND(COUNT(CASE WHEN m."winnerId" = p.id THEN 1 END)::numeric / COUNT(m.id) * 100)::int
+        THEN ROUND(COUNT(CASE WHEN
+          m."winnerId" = p.id
+          OR (m."winnerId" = m."player1Id" AND m."player1Partner" = p.name)
+          OR (m."winnerId" = m."player2Id" AND m."player2Partner" = p.name)
+        THEN 1 END)::numeric / COUNT(m.id) * 100)::int
         ELSE 0 END AS "winRate"
     FROM sl_player p
     JOIN sl_generation_player gp ON gp."playerId" = p.id
-    LEFT JOIN sl_match m ON (m."player1Id" = p.id OR m."player2Id" = p.id)
+    -- Join on all matches where they appear (as primary OR partner text)
+    LEFT JOIN sl_match m ON (
+      m."player1Id" = p.id OR m."player2Id" = p.id
+      OR m."player1Partner" = p.name OR m."player2Partner" = p.name
+    )
     WHERE gp."generationId" = ${genId} AND gp."isPrimary" = true
     GROUP BY p.id, p.name, p.slug, p.country, p.category, p."worldRanking", p."imageUrl", p."isActive", p."matchCount"
     ORDER BY p."matchCount" DESC
