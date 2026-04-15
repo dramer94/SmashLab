@@ -30,6 +30,7 @@ model SlPlayer {
   matchesAsPlayer1 SlMatch[] @relation("Player1Matches")
   matchesAsPlayer2 SlMatch[] @relation("Player2Matches")
   teamEventSquads  SlTeamEventSquad[]
+  generations      SlGenerationPlayer[]
 
   @@index([country])
   @@index([worldRanking])
@@ -172,4 +173,40 @@ model SlSyncLog {
   errorMessage      String?
 
   @@map("sl_sync_log")
+}
+
+model SlGeneration {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  country        String
+  label          String
+  birthYearStart Int?
+  birthYearEnd   Int?
+  description    String?
+  isManual       Boolean  @default(false)
+  displayOrder   Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  players SlGenerationPlayer[]
+
+  @@index([country])
+  @@map("sl_generation")
+}
+
+model SlGenerationPlayer {
+  id               String  @id @default(cuid())
+  generationId     String
+  playerId         String
+  isPrimary        Boolean @default(true)
+  cohortYearEst    Int?
+  confidence       String  @default("high")
+  isManualOverride Boolean @default(false)
+
+  generation SlGeneration @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  player     SlPlayer     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([generationId, playerId])
+  @@index([generationId])
+  @@index([playerId])
+  @@map("sl_generation_player")
 }
