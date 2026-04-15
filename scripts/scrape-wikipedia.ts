@@ -331,9 +331,62 @@ interface ChampionshipResult {
   score: string
 }
 
-async function scrapeChampionship(wikiPath: string): Promise<ChampionshipResult[]> {
+// Parse the Wikipedia infobox to extract dates and location
+function extractInfobox(html: string, year: number): { start: string; end: string; location: string; country: string } {
+  const MONTHS: Record<string, string> = {
+    january: '01', february: '02', march: '03', april: '04', may: '05', june: '06',
+    july: '07', august: '08', september: '09', october: '10', november: '11', december: '12',
+  }
+
+  // Find infobox table
+  const infoboxM = html.match(/<table[^>]*infobox[^>]*>([\s\S]*?)<\/table>/i)
+  if (!infoboxM) return { start: `${year}-01-01`, end: `${year}-01-07`, location: '', country: '' }
+
+  const rows = [...infoboxM[1].matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)]
+  let dateStr = '', location = '', country = ''
+
+  for (const rowM of rows) {
+    const cells = [...rowM[1].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)]
+      .map(c => stripTags(c[1]).trim())
+      .filter(Boolean)
+
+    if (cells.length >= 2) {
+      const label = cells[0].toLowerCase()
+      const value = cells[1]
+      if (label === 'dates' || label === 'date') dateStr = value
+      if (label === 'location') {
+        const parts = value.split(',').map(s => s.trim())
+        location = parts[0] ?? ''
+        country = parts[1] ?? ''
+      }
+    }
+  }
+
+  // Parse date string: "7–12 April 2026" or "6–12 April" (year from page title)
+  const dm = dateStr.match(/(\d+)[–\-](\d+)\s+(\w+)(?:\s+(\d{4}))?/)
+  if (dm) {
+    const mon = MONTHS[dm[3].toLowerCase()] ?? '01'
+    const y = dm[4] ?? String(year)
+    return {
+      start: `${y}-${mon}-${dm[1].padStart(2, '0')}`,
+      end: `${y}-${mon}-${dm[2].padStart(2, '0')}`,
+      location,
+      country,
+    }
+  }
+
+  return { start: `${year}-01-01`, end: `${year}-01-07`, location, country }
+}
+
+async function scrapeChampionship(wikiPath: string): Promise<{ results: ChampionshipResult[]; dates: { start: string; end: string; location: string; country: string } }> {
   console.log(`\nFetching Wikipedia: ${wikiPath}...`)
   const html = await fetchWiki(wikiPath)
+
+  // Extract dates/location from infobox — no hardcoding
+  const year = parseInt(wikiPath.match(/\d{4}/)?.[0] ?? String(new Date().getFullYear()))
+  const dates = extractInfobox(html, year)
+  console.log(`  Dates: ${dates.start} → ${dates.end} | Location: ${dates.location}, ${dates.country}`)
+
   const results: ChampionshipResult[] = []
   const tables = parseTables(html)
 
@@ -374,7 +427,7 @@ async function scrapeChampionship(wikiPath: string): Promise<ChampionshipResult[
     }
   }
 
-  return results
+  return { results, dates }
 }
 
 function parseChampionshipCell(cell: string): { name: string; partner: string | null; country: string } {
@@ -521,12 +574,7 @@ async function main() {
   console.log(`World Tour: +${newTournaments} tournaments, +${newMatches} finals`)
 
   // 3. Scrape European & Asian Championships separately
-  // European and Asian championship dates (approximate — update yearly)
-  const CHAMP_DATES: Record<string, { start: string; end: string; location: string; country: string }> = {
-    [`${year}_European_Badminton_Championships`]: { start: `${year}-04-06`, end: `${year}-04-12`, location: 'Huelva', country: 'Spain' },
-    [`${year}_Badminton_Asia_Championships`]: { start: `${year}-04-07`, end: `${year}-04-12`, location: 'Ningbo', country: 'China' },
-  }
-
+  // Dates and location are extracted live from each Wikipedia infobox — no hardcoding
   const championships = [
     { path: `${year}_European_Badminton_Championships`, name: `${year} European Badminton Championships` },
     { path: `${year}_Badminton_Asia_Championships`, name: `${year} Badminton Asia Championships` },
@@ -534,15 +582,25 @@ async function main() {
 
   for (const champ of championships) {
     await sleep(DELAY)
-    const dates = CHAMP_DATES[champ.path] ?? { start: `${year}-04-01`, end: `${year}-04-07`, location: '', country: '' }
     try {
-      const results = await scrapeChampionship(champ.path)
+      const { results, dates } = await scrapeChampionship(champ.path)
       if (results.length === 0) { console.log(`  No data found for ${champ.name}`); continue }
 
       const tid = await upsertTournamentFromWiki(
         champ.name, dates.start, dates.end,
         dates.location, dates.country, year
       )
+
+      // Update dates if tournament already exists (may have had wrong placeholder dates)
+      await prisma.slTournament.updateMany({
+        where: { id: tid },
+        data: {
+          startDate: new Date(dates.start),
+          endDate: new Date(dates.end),
+          location: dates.location || undefined,
+          country: dates.country || undefined,
+        },
+      })
 
       let champMatches = 0
       for (const r of results) {
