@@ -12,6 +12,7 @@ const navLinks = [
   { href: "/stats", label: "Records" },
   { href: "/head-to-head", label: "H2H" },
   { href: "/olympics", label: "Olympics" },
+  { href: "/team-cups", label: "Team Cups" },
 ]
 
 export function Nav() {
