@@ -31,6 +31,7 @@ model SlPlayer {
   matchesAsPlayer2 SlMatch[] @relation("Player2Matches")
   teamEventSquads  SlTeamEventSquad[]
   generations      SlGenerationPlayer[]
+  rankingSnapshots SlRankingSnapshot[]
 
   @@index([country])
   @@index([worldRanking])
@@ -158,6 +159,28 @@ model SlTeamEventSquad {
   @@index([teamEventId, country])
   @@index([playerId])
   @@map("sl_team_event_squad")
+}
+
+// Weekly BWF ranking snapshots (sourced from badmintonstatistics.net's
+// Unified Rankings). One row per (date, category, player). For doubles
+// the same row appears for each of the two players in the pair; pairKey
+// groups them so we can reconstruct pair rankings.
+model SlRankingSnapshot {
+  id           String   @id @default(cuid())
+  snapshotDate DateTime @db.Date
+  category     String   // MS | WS | MD | WD | XD
+  playerId     String
+  pairKey      String?  // "playerAId|playerBId" sorted, null for singles
+  rank         Int
+  points       Int?
+  source       String   @default("badmintonstatistics-unified")
+
+  Player       SlPlayer @relation(fields: [playerId], references: [id])
+
+  @@unique([snapshotDate, category, playerId])
+  @@index([snapshotDate, category])
+  @@index([playerId])
+  @@map("sl_ranking_snapshot")
 }
 
 model SlSyncLog {

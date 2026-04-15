@@ -563,7 +563,9 @@ export interface GenerationSummary {
   }[]
 }
 
-export async function getGenerations(country?: string): Promise<GenerationSummary[]> {
+// Shared CTE fragment that computes per-generation stats only for players
+// who belong to at least one generation — avoids scanning all players.
+async function fetchGenRows(whereClause: string, param?: string) {
   type GenRow = {
     id: string; slug: string; country: string; label: string
     birthYearStart: number | null; birthYearEnd: number | null
@@ -571,66 +573,69 @@ export async function getGenerations(country?: string): Promise<GenerationSummar
     playerCount: number; titles: number; totalMatches: number
     activeStart: number | null; activeEnd: number | null
   }
+  type PlayerRow = { id: string; name: string; slug: string; country: string; category: string; worldRanking: number | null; imageUrl: string | null; isActive: boolean; matchCount: number }
 
-  // Pre-compute per-player stats to avoid Cartesian product from multiple JOINs
-  const playerStats = await prisma.$queryRaw<{
-    playerId: string; titles: number; matchCount: number
-    activeStart: number | null; activeEnd: number | null
-  }[]>`
-    SELECT
-      p.id AS "playerId",
-      p."matchCount",
-      COUNT(CASE WHEN m.round = 'F' AND m."winnerId" = p.id THEN 1 END)::int AS titles,
-      EXTRACT(YEAR FROM MIN(m.date))::int AS "activeStart",
-      EXTRACT(YEAR FROM MAX(m.date))::int AS "activeEnd"
-    FROM sl_player p
-    LEFT JOIN sl_match m ON (m."player1Id" = p.id OR m."player2Id" = p.id)
-    GROUP BY p.id, p."matchCount"
-  `
-  const statsMap = new Map(playerStats.map(s => [s.playerId, s]))
-
-  const genRows = country
-    ? await prisma.$queryRaw<{ id: string; slug: string; country: string; label: string; birthYearStart: number | null; birthYearEnd: number | null; description: string | null; displayOrder: number; playerIds: string[] }[]>`
+  // Single query: CTE computes per-player stats for only generation members
+  const rows = param !== undefined
+    ? await prisma.$queryRaw<GenRow[]>`
+        WITH ps AS (
+          SELECT
+            p.id,
+            p."matchCount",
+            COUNT(CASE WHEN m.round = 'F' AND m."winnerId" = p.id THEN 1 END)::int AS titles,
+            EXTRACT(YEAR FROM MIN(m.date))::int AS "activeStart",
+            EXTRACT(YEAR FROM MAX(m.date))::int AS "activeEnd"
+          FROM sl_player p
+          JOIN sl_generation_player gp0 ON gp0."playerId" = p.id AND gp0."isPrimary" = true
+          LEFT JOIN sl_match m ON m."player1Id" = p.id OR m."player2Id" = p.id
+          GROUP BY p.id, p."matchCount"
+        )
         SELECT
           g.id, g.slug, g.country, g.label,
           g."birthYearStart", g."birthYearEnd", g.description, g."displayOrder",
-          ARRAY_AGG(gp."playerId") AS "playerIds"
+          COUNT(DISTINCT gp."playerId")::int        AS "playerCount",
+          COALESCE(SUM(ps.titles), 0)::int          AS titles,
+          COALESCE(SUM(ps."matchCount"), 0)::int    AS "totalMatches",
+          MIN(ps."activeStart")::int                AS "activeStart",
+          MAX(ps."activeEnd")::int                  AS "activeEnd"
         FROM sl_generation g
         JOIN sl_generation_player gp ON gp."generationId" = g.id AND gp."isPrimary" = true
-        WHERE g.country = ${country}
+        JOIN ps ON ps.id = gp."playerId"
+        WHERE g.country = ${param}
         GROUP BY g.id, g.slug, g.country, g.label, g."birthYearStart", g."birthYearEnd", g.description, g."displayOrder"
         ORDER BY g."displayOrder" DESC, g."birthYearStart" DESC NULLS LAST
       `
-    : await prisma.$queryRaw<{ id: string; slug: string; country: string; label: string; birthYearStart: number | null; birthYearEnd: number | null; description: string | null; displayOrder: number; playerIds: string[] }[]>`
+    : await prisma.$queryRaw<GenRow[]>`
+        WITH ps AS (
+          SELECT
+            p.id,
+            p."matchCount",
+            COUNT(CASE WHEN m.round = 'F' AND m."winnerId" = p.id THEN 1 END)::int AS titles,
+            EXTRACT(YEAR FROM MIN(m.date))::int AS "activeStart",
+            EXTRACT(YEAR FROM MAX(m.date))::int AS "activeEnd"
+          FROM sl_player p
+          JOIN sl_generation_player gp0 ON gp0."playerId" = p.id AND gp0."isPrimary" = true
+          LEFT JOIN sl_match m ON m."player1Id" = p.id OR m."player2Id" = p.id
+          GROUP BY p.id, p."matchCount"
+        )
         SELECT
           g.id, g.slug, g.country, g.label,
           g."birthYearStart", g."birthYearEnd", g.description, g."displayOrder",
-          ARRAY_AGG(gp."playerId") AS "playerIds"
+          COUNT(DISTINCT gp."playerId")::int        AS "playerCount",
+          COALESCE(SUM(ps.titles), 0)::int          AS titles,
+          COALESCE(SUM(ps."matchCount"), 0)::int    AS "totalMatches",
+          MIN(ps."activeStart")::int                AS "activeStart",
+          MAX(ps."activeEnd")::int                  AS "activeEnd"
         FROM sl_generation g
         JOIN sl_generation_player gp ON gp."generationId" = g.id AND gp."isPrimary" = true
+        JOIN ps ON ps.id = gp."playerId"
         GROUP BY g.id, g.slug, g.country, g.label, g."birthYearStart", g."birthYearEnd", g.description, g."displayOrder"
         ORDER BY g.country, g."displayOrder" DESC, g."birthYearStart" DESC NULLS LAST
       `
 
-  const rows: GenRow[] = genRows.map(g => {
-    const ids = g.playerIds ?? []
-    const pstats = ids.map(id => statsMap.get(id)).filter(Boolean) as typeof playerStats
-    return {
-      id: g.id, slug: g.slug, country: g.country, label: g.label,
-      birthYearStart: g.birthYearStart, birthYearEnd: g.birthYearEnd,
-      description: g.description, displayOrder: g.displayOrder,
-      playerCount: ids.length,
-      titles: pstats.reduce((s, p) => s + p.titles, 0),
-      totalMatches: pstats.reduce((s, p) => s + p.matchCount, 0),
-      activeStart: pstats.reduce((mn, p) => p.activeStart !== null && (mn === null || p.activeStart < mn) ? p.activeStart : mn, null as number | null),
-      activeEnd: pstats.reduce((mx, p) => p.activeEnd !== null && (mx === null || p.activeEnd > mx) ? p.activeEnd : mx, null as number | null),
-    }
-  })
-
-  // Fetch top 6 players per generation (by matchCount)
-  const results: GenerationSummary[] = []
+  // Fetch top 6 players per generation
+  const results: (GenRow & { players: PlayerRow[] })[] = []
   for (const row of rows) {
-    type PlayerRow = { id: string; name: string; slug: string; country: string; category: string; worldRanking: number | null; imageUrl: string | null; isActive: boolean; matchCount: number }
     const players = await prisma.$queryRaw<PlayerRow[]>`
       SELECT p.id, p.name, p.slug, p.country, p.category, p."worldRanking", p."imageUrl", p."isActive", p."matchCount"
       FROM sl_player p
@@ -644,14 +649,52 @@ export async function getGenerations(country?: string): Promise<GenerationSummar
   return results
 }
 
+export async function getGenerations(country?: string): Promise<GenerationSummary[]> {
+  return fetchGenRows('', country)
+}
+
 export async function getGenerationBySlug(slug: string): Promise<GenerationSummary | null> {
-  const gens = await prisma.$queryRaw<{ id: string; country: string }[]>`
-    SELECT id, country FROM sl_generation WHERE slug = ${slug} LIMIT 1
+  const gens = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT id FROM sl_generation WHERE slug = ${slug} LIMIT 1
   `
   if (!gens[0]) return null
-  const [gen] = await getGenerations(gens[0].country)
-  const found = (await getGenerations(gens[0].country)).find(g => g.slug === slug)
-  if (!found) return null
+  const genId = gens[0].id
+
+  type GenRow = {
+    id: string; slug: string; country: string; label: string
+    birthYearStart: number | null; birthYearEnd: number | null
+    description: string | null; displayOrder: number
+    playerCount: number; titles: number; totalMatches: number
+    activeStart: number | null; activeEnd: number | null
+  }
+  const rows = await prisma.$queryRaw<GenRow[]>`
+    WITH ps AS (
+      SELECT
+        p.id,
+        p."matchCount",
+        COUNT(CASE WHEN m.round = 'F' AND m."winnerId" = p.id THEN 1 END)::int AS titles,
+        EXTRACT(YEAR FROM MIN(m.date))::int AS "activeStart",
+        EXTRACT(YEAR FROM MAX(m.date))::int AS "activeEnd"
+      FROM sl_player p
+      JOIN sl_generation_player gp0 ON gp0."playerId" = p.id AND gp0."isPrimary" = true AND gp0."generationId" = ${genId}
+      LEFT JOIN sl_match m ON m."player1Id" = p.id OR m."player2Id" = p.id
+      GROUP BY p.id, p."matchCount"
+    )
+    SELECT
+      g.id, g.slug, g.country, g.label,
+      g."birthYearStart", g."birthYearEnd", g.description, g."displayOrder",
+      COUNT(DISTINCT gp."playerId")::int        AS "playerCount",
+      COALESCE(SUM(ps.titles), 0)::int          AS titles,
+      COALESCE(SUM(ps."matchCount"), 0)::int    AS "totalMatches",
+      MIN(ps."activeStart")::int                AS "activeStart",
+      MAX(ps."activeEnd")::int                  AS "activeEnd"
+    FROM sl_generation g
+    JOIN sl_generation_player gp ON gp."generationId" = g.id AND gp."isPrimary" = true
+    JOIN ps ON ps.id = gp."playerId"
+    WHERE g.id = ${genId}
+    GROUP BY g.id, g.slug, g.country, g.label, g."birthYearStart", g."birthYearEnd", g.description, g."displayOrder"
+  `
+  if (!rows[0]) return null
 
   // For detail page: get ALL players (not just 6)
   type PlayerRow = { id: string; name: string; slug: string; country: string; category: string; worldRanking: number | null; imageUrl: string | null; isActive: boolean; matchCount: number }
@@ -659,10 +702,10 @@ export async function getGenerationBySlug(slug: string): Promise<GenerationSumma
     SELECT p.id, p.name, p.slug, p.country, p.category, p."worldRanking", p."imageUrl", p."isActive", p."matchCount"
     FROM sl_player p
     JOIN sl_generation_player gp ON gp."playerId" = p.id
-    WHERE gp."generationId" = ${found.id} AND gp."isPrimary" = true
+    WHERE gp."generationId" = ${genId} AND gp."isPrimary" = true
     ORDER BY p."matchCount" DESC
   `
-  return { ...found, players: allPlayers }
+  return { ...rows[0], players: allPlayers }
 }
 
 export async function getPlayerGeneration(playerId: string): Promise<{ slug: string; label: string; country: string } | null> {
