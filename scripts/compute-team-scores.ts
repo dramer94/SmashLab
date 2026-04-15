@@ -12,13 +12,15 @@ import { PrismaClient, Prisma } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
+// A Thomas/Uber tie is decided by 5 rubbers: 3 singles + 2 doubles pairs.
+// Sudirman ties play 5 rubbers across all 5 categories.
 const SLOTS: Record<string, Array<{ category: string; n: number }>> = {
   THOMAS: [
-    { category: 'MS', n: 2 },
+    { category: 'MS', n: 3 },
     { category: 'MD', n: 2 },
   ],
   UBER: [
-    { category: 'WS', n: 2 },
+    { category: 'WS', n: 3 },
     { category: 'WD', n: 2 },
   ],
   SUDIRMAN: [
@@ -37,11 +39,13 @@ function windowFor(eventType: string, year: number, explicit?: Date | null): { s
   return { start, end }
 }
 
-type RankedRow = { country: string; player_id: string; score: number; rnk: number }
+type RankedRow = { country: string; player_id: string; score: number; country_rnk: number; global_rnk: number }
 
 /**
  * For one event window + category, return top-N players per country with
- * their score + intra-country rank. Single round-trip SQL.
+ * their score, intra-country rank, and global-rank-by-form (derived from
+ * our own weighted-win score since BWF historical rankings aren't in the
+ * DB). Single round-trip SQL.
  */
 async function topPerCountry(
   category: string,
@@ -80,12 +84,13 @@ async function topPerCountry(
         country,
         player_id,
         score,
-        ROW_NUMBER() OVER (PARTITION BY country ORDER BY score DESC) AS rnk
+        ROW_NUMBER() OVER (PARTITION BY country ORDER BY score DESC) AS country_rnk,
+        ROW_NUMBER() OVER (ORDER BY score DESC) AS global_rnk
       FROM player_scores
     )
-    SELECT country, player_id, score, rnk::int AS rnk
+    SELECT country, player_id, score, country_rnk::int AS country_rnk, global_rnk::int AS global_rnk
     FROM ranked
-    WHERE rnk <= ${n}
+    WHERE country_rnk <= ${n}
   `)
 }
 
@@ -108,7 +113,7 @@ async function main() {
     // Per-country totals across categories.
     const countryTotals = new Map<string, number>()
     // Persisted squad rows for this event.
-    const squadRows: Array<{ country: string; playerId: string; category: string; slotRank: number; score: number }> = []
+    const squadRows: Array<{ country: string; playerId: string; category: string; slotRank: number; globalRank: number; score: number }> = []
 
     for (const slot of slots) {
       const ranked = await topPerCountry(slot.category, slot.n, start, end)
@@ -118,7 +123,8 @@ async function main() {
           country: r.country,
           playerId: r.player_id,
           category: slot.category,
-          slotRank: Number(r.rnk),
+          slotRank: Number(r.country_rnk),
+          globalRank: Number(r.global_rnk),
           score: Number(r.score),
         })
       }

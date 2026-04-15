@@ -242,10 +242,12 @@ export default async function TeamCupsPage({
               <h2 className="font-bold text-slate-800 mb-3">Squad breakdown</h2>
               <p className="text-xs text-slate-500 mb-3">
                 The players whose wins in the 12 months before the event drove
-                each country&apos;s score. &quot;Country rank&quot; = rank inside that
-                country&apos;s talent pool for the category. &quot;World rank&quot; shows
-                the player&apos;s current BWF world ranking (may differ from their
-                ranking at the time of the event).
+                each country&apos;s score. <strong>Slot</strong> = category + rank
+                inside the country (MS 1 = that country&apos;s best men&apos;s
+                singles). <strong>Form rank</strong> = where the player sat
+                <em> globally</em> in that category at the time of the event,
+                derived from weighted match wins (not BWF&apos;s official
+                ranking — we don&apos;t have historical snapshots of that).
               </p>
               <div className="space-y-3">
                 {results.map(r => {
@@ -277,7 +279,7 @@ export default async function TeamCupsPage({
                             <tr>
                               <th className="text-left px-4 py-1.5">Slot</th>
                               <th className="text-left px-4 py-1.5">Player</th>
-                              <th className="text-right px-4 py-1.5">World rank</th>
+                              <th className="text-right px-4 py-1.5">Form rank</th>
                               <th className="text-right px-4 py-1.5">Score</th>
                             </tr>
                           </thead>
@@ -296,7 +298,7 @@ export default async function TeamCupsPage({
                                   </Link>
                                 </td>
                                 <td className="px-4 py-1.5 text-right font-mono tabular-nums text-slate-600">
-                                  {s.Player.worldRanking ? `#${s.Player.worldRanking}` : '—'}
+                                  {s.globalRank ? `#${s.globalRank}` : '—'}
                                 </td>
                                 <td className="px-4 py-1.5 text-right font-mono tabular-nums text-slate-700">
                                   {s.score.toFixed(1)}
