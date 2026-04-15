@@ -1,29 +1,19 @@
 /**
  * Compute TeamScore for every country at every Thomas/Uber/Sudirman edition.
  *
- * Formula:
- *   For each squad slot required by the event, pick the country's top
- *   players (by weighted wins in the 12 months before the event start) and
- *   sum their scores. Sudirman has 5 slots (1 MS, 1 WS, 1 MD, 1 WD, 1 XD);
- *   Thomas has 4 (2 MS, 2 MD); Uber has 4 (2 WS, 2 WD).
- *
- * Player score = sum of (1 + round weight) across wins in the window.
- * Round weights: F=2.0, SF=1.5, QF=1.2, R16=1.0, R32=0.8, Group=0.6.
+ * Uses a single aggregate SQL per event+category to rank players inside each
+ * country and sum the top-N per squad slot, so total runtime is ~1 query
+ * per (event × category) combo instead of one query per player.
  *
  * Usage:
  *   npx tsx scripts/compute-team-scores.ts                # all events
- *   npx tsx scripts/compute-team-scores.ts --year 2024    # one edition (all types)
+ *   npx tsx scripts/compute-team-scores.ts --year 2024    # one year only
  */
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-const ROUND_WEIGHT: Record<string, number> = {
-  F: 2.0, SF: 1.5, QF: 1.2, R16: 1.0, R32: 0.8, R64: 0.6, R128: 0.4,
-  Group: 0.6, GS: 0.6,
-}
-
-// How many players per category count toward the team score.
+// How many top players per category count toward the team score.
 const SLOTS: Record<string, Array<{ category: string; n: number }>> = {
   THOMAS: [
     { category: 'MS', n: 2 },
@@ -42,46 +32,70 @@ const SLOTS: Record<string, Array<{ category: string; n: number }>> = {
   ],
 }
 
-function eventStartDate(type: string, year: number): Date {
-  // Approximate start: Thomas/Uber/Sudirman are usually May. If the real
-  // startDate is stored on the event row we prefer that.
-  return new Date(Date.UTC(year, 4, 1))
+function windowFor(eventType: string, year: number, explicit?: Date | null): { start: Date; end: Date } {
+  const end = explicit || new Date(Date.UTC(year, 4, 1))
+  const start = new Date(end)
+  start.setUTCFullYear(start.getUTCFullYear() - 1)
+  return { start, end }
 }
 
-async function scorePlayer(playerId: string, category: string, windowStart: Date, windowEnd: Date): Promise<number> {
-  const wins = await prisma.slMatch.findMany({
-    where: {
-      category,
-      winnerId: playerId,
-      date: { gte: windowStart, lt: windowEnd },
-    },
-    select: { round: true },
-  })
-  return wins.reduce((sum, w) => sum + (1 + (ROUND_WEIGHT[w.round] ?? 0.5)), 0)
-}
+type TopRow = { country: string; total: number }
 
-async function computeCountryScore(country: string, eventType: string, endDate: Date): Promise<number> {
-  const startDate = new Date(endDate)
-  startDate.setUTCFullYear(startDate.getUTCFullYear() - 1)
+/**
+ * For one event window + category, pull every (country, player) score from
+ * sl_match, then rank players inside each country and keep the top-N per
+ * country. Returns a map country → total-of-top-N.
+ */
+async function topPerCountry(
+  category: string,
+  n: number,
+  start: Date,
+  end: Date
+): Promise<Map<string, number>> {
+  // Compute round-weighted wins per player in the window, then rank inside
+  // each country and keep rows where rank <= n, then sum.
+  const rows = await prisma.$queryRaw<TopRow[]>(Prisma.sql`
+    WITH player_scores AS (
+      SELECT
+        p.country AS country,
+        m."winnerId" AS player_id,
+        SUM(
+          1 + CASE m.round
+            WHEN 'F' THEN 2.0
+            WHEN 'SF' THEN 1.5
+            WHEN 'QF' THEN 1.2
+            WHEN 'R16' THEN 1.0
+            WHEN 'R32' THEN 0.8
+            WHEN 'R64' THEN 0.6
+            WHEN 'R128' THEN 0.4
+            WHEN 'Group' THEN 0.6
+            WHEN 'GS' THEN 0.6
+            ELSE 0.5
+          END
+        ) AS score
+      FROM sl_match m
+      JOIN sl_player p ON p.id = m."winnerId"
+      WHERE m.category = ${category}
+        AND m.date >= ${start}
+        AND m.date < ${end}
+      GROUP BY p.country, m."winnerId"
+    ),
+    ranked AS (
+      SELECT
+        country,
+        score,
+        ROW_NUMBER() OVER (PARTITION BY country ORDER BY score DESC) AS rnk
+      FROM player_scores
+    )
+    SELECT country, SUM(score)::float8 AS total
+    FROM ranked
+    WHERE rnk <= ${n}
+    GROUP BY country
+  `)
 
-  let total = 0
-  for (const slot of SLOTS[eventType] || []) {
-    // All of this country's players in this category.
-    const players = await prisma.slPlayer.findMany({
-      where: { country, category: slot.category, matchCount: { gt: 0 } },
-      select: { id: true, name: true },
-    })
-
-    const scored: Array<{ playerId: string; name: string; score: number }> = []
-    for (const p of players) {
-      const s = await scorePlayer(p.id, slot.category, startDate, endDate)
-      if (s > 0) scored.push({ playerId: p.id, name: p.name, score: s })
-    }
-    scored.sort((a, b) => b.score - a.score)
-    const top = scored.slice(0, slot.n)
-    for (const t of top) total += t.score
-  }
-  return total
+  const out = new Map<string, number>()
+  for (const r of rows) out.set(r.country, Number(r.total))
+  return out
 }
 
 async function main() {
@@ -97,17 +111,34 @@ async function main() {
   console.log(`Computing scores for ${events.length} event editions…`)
 
   for (const ev of events) {
-    const endDate = ev.startDate || eventStartDate(ev.type, ev.year)
-    console.log(`\n${ev.type} ${ev.year} (${ev.results.length} countries)`)
+    const { start, end } = windowFor(ev.type, ev.year, ev.startDate || null)
+    const slots = SLOTS[ev.type] || []
 
+    // For each category, fetch the top-N sum per country in one SQL.
+    const perCategory: Map<string, number>[] = []
+    for (const slot of slots) {
+      const m = await topPerCountry(slot.category, slot.n, start, end)
+      perCategory.push(m)
+    }
+
+    // Combine all categories into a per-country team score.
+    const countryTotals = new Map<string, number>()
+    for (const m of perCategory) {
+      for (const [c, v] of m.entries()) {
+        countryTotals.set(c, (countryTotals.get(c) ?? 0) + v)
+      }
+    }
+
+    // Write each result row (countries without any matches in the window
+    // get 0, not null, so the UI can still sort them).
     for (const r of ev.results) {
-      const score = await computeCountryScore(r.country, ev.type, endDate)
+      const score = countryTotals.get(r.country) ?? 0
       await prisma.slTeamEventResult.update({
         where: { id: r.id },
         data: { teamScore: score, computedAt: new Date() },
       })
-      console.log(`  ${r.country.padEnd(4)} ${r.finish.padEnd(14)} score=${score.toFixed(1)}`)
     }
+    console.log(`${ev.type} ${ev.year}: scored ${ev.results.length} countries`)
   }
 
   console.log('\n✅ Done.')
