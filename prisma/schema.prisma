@@ -150,6 +150,7 @@ model SlTeamEventSquad {
   category    String   // MS | WS | MD | WD | XD
   slotRank    Int      // 1 = top player in category, 2 = second, ...
   globalRank  Int?     // rank of this player globally in the category at event time (by win-score)
+  bwfRank     Int?     // BWF Unified Ranking at the snapshot closest before event (from SlRankingSnapshot)
   score       Float    // contribution to team score
 
   TeamEvent   SlTeamEvent @relation(fields: [teamEventId], references: [id], onDelete: Cascade)

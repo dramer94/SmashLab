@@ -244,10 +244,11 @@ export default async function TeamCupsPage({
                 The players whose wins in the 12 months before the event drove
                 each country&apos;s score. <strong>Slot</strong> = category + rank
                 inside the country (MS 1 = that country&apos;s best men&apos;s
-                singles). <strong>Form rank</strong> = where the player sat
-                <em> globally</em> in that category at the time of the event,
-                derived from weighted match wins (not BWF&apos;s official
-                ranking — we don&apos;t have historical snapshots of that).
+                singles). <strong>BWF rank</strong> = the player&apos;s world
+                ranking at the last published week before the event (Unified
+                Rankings via badmintonstatistics.net). <strong>Form rank</strong>
+                = where the player sat globally in that category purely on
+                match wins in the 12-month window.
               </p>
               <div className="space-y-3">
                 {results.map(r => {
@@ -279,7 +280,8 @@ export default async function TeamCupsPage({
                             <tr>
                               <th className="text-left px-4 py-1.5">Slot</th>
                               <th className="text-left px-4 py-1.5">Player</th>
-                              <th className="text-right px-4 py-1.5">Form rank</th>
+                              <th className="text-right px-4 py-1.5" title="BWF Unified Ranking at the last published week before the event">BWF rank</th>
+                              <th className="text-right px-4 py-1.5" title="Where the player sat globally in their category by weighted match wins">Form rank</th>
                               <th className="text-right px-4 py-1.5">Score</th>
                             </tr>
                           </thead>
@@ -296,6 +298,9 @@ export default async function TeamCupsPage({
                                   >
                                     {s.Player.name}
                                   </Link>
+                                </td>
+                                <td className="px-4 py-1.5 text-right font-mono tabular-nums text-blue-700">
+                                  {s.bwfRank ? `#${s.bwfRank}` : <span className="text-slate-400">—</span>}
                                 </td>
                                 <td className="px-4 py-1.5 text-right font-mono tabular-nums text-slate-600">
                                   {s.globalRank ? `#${s.globalRank}` : '—'}

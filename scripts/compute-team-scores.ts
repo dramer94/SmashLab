@@ -113,7 +113,7 @@ async function main() {
     // Per-country totals across categories.
     const countryTotals = new Map<string, number>()
     // Persisted squad rows for this event.
-    const squadRows: Array<{ country: string; playerId: string; category: string; slotRank: number; globalRank: number; score: number }> = []
+    const squadRows: Array<{ country: string; playerId: string; category: string; slotRank: number; globalRank: number; bwfRank: number | null; score: number }> = []
 
     for (const slot of slots) {
       const ranked = await topPerCountry(slot.category, slot.n, start, end)
@@ -125,8 +125,34 @@ async function main() {
           category: slot.category,
           slotRank: Number(r.country_rnk),
           globalRank: Number(r.global_rnk),
+          bwfRank: null, // filled below
           score: Number(r.score),
         })
+      }
+    }
+
+    // Look up the latest SlRankingSnapshot strictly before the event's
+    // start date for each squad player + category. Batch-query once for
+    // all (category, playerId) pairs so this stays O(1) round-trip.
+    const playerCats = Array.from(new Set(squadRows.map(s => `${s.category}:${s.playerId}`)))
+    if (playerCats.length > 0) {
+      type RankRow = { playerId: string; category: string; rank: number }
+      const ranks = await prisma.$queryRaw<RankRow[]>(Prisma.sql`
+        SELECT DISTINCT ON (rs."playerId", rs.category)
+               rs."playerId", rs.category, rs.rank
+        FROM sl_ranking_snapshot rs
+        WHERE rs."snapshotDate" < ${end}
+          AND (rs."playerId", rs.category) IN (
+            ${Prisma.join(
+              squadRows.map(s => Prisma.sql`(${s.playerId}, ${s.category})`)
+            )}
+          )
+        ORDER BY rs."playerId", rs.category, rs."snapshotDate" DESC
+      `)
+      const rankByKey = new Map<string, number>()
+      for (const r of ranks) rankByKey.set(`${r.category}:${r.playerId}`, r.rank)
+      for (const s of squadRows) {
+        s.bwfRank = rankByKey.get(`${s.category}:${s.playerId}`) ?? null
       }
     }
 
