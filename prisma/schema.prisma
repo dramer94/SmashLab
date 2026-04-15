@@ -29,6 +29,7 @@ model SlPlayer {
 
   matchesAsPlayer1 SlMatch[] @relation("Player1Matches")
   matchesAsPlayer2 SlMatch[] @relation("Player2Matches")
+  teamEventSquads  SlTeamEventSquad[]
 
   @@index([country])
   @@index([worldRanking])
@@ -110,6 +111,7 @@ model SlTeamEvent {
   createdAt DateTime @default(now())
 
   results   SlTeamEventResult[]
+  squads    SlTeamEventSquad[]
 
   @@unique([type, year])
   @@index([type])
@@ -133,6 +135,27 @@ model SlTeamEventResult {
   @@unique([teamEventId, country])
   @@index([country])
   @@map("sl_team_event_result")
+}
+
+// One row per player that contributed to a country's team score at a
+// given event edition. Populated by scripts/compute-team-scores.ts so the
+// UI can show "these 4 players carried China's Thomas Cup 2024 score".
+model SlTeamEventSquad {
+  id          String   @id @default(cuid())
+  teamEventId String
+  country     String
+  playerId    String
+  category    String   // MS | WS | MD | WD | XD
+  slotRank    Int      // 1 = top player in category, 2 = second, ...
+  score       Float    // contribution to team score
+
+  TeamEvent   SlTeamEvent @relation(fields: [teamEventId], references: [id], onDelete: Cascade)
+  Player      SlPlayer    @relation(fields: [playerId], references: [id])
+
+  @@unique([teamEventId, country, category, slotRank])
+  @@index([teamEventId, country])
+  @@index([playerId])
+  @@map("sl_team_event_squad")
 }
 
 model SlSyncLog {

@@ -7,6 +7,7 @@ import {
   getPlayerH2HRecords,
   getFormTrend,
   getPlayerMatches,
+  getPlayerGeneration,
   getFlag,
 } from "@/lib/queries"
 import { formatDate } from "@/lib/utils"
@@ -39,11 +40,12 @@ export default async function PlayerPage({ params }: Props) {
   const player = await getPlayerBySlug(slug)
   if (!player) notFound()
 
-  const [stats, h2hRecords, formTrend, recentMatches] = await Promise.all([
+  const [stats, h2hRecords, formTrend, recentMatches, generation] = await Promise.all([
     getPlayerStats(player.id),
     getPlayerH2HRecords(player.id),
     getFormTrend(player.id, 20),
     getPlayerMatches(player.id, 10),
+    getPlayerGeneration(player.id),
   ])
 
   const flag = getFlag(player.country)
@@ -74,6 +76,15 @@ export default async function PlayerPage({ params }: Props) {
               <span>Born: {formatDate(player.birthDate, { year: 'numeric', month: 'long', day: 'numeric' })}</span>
             )}
           </div>
+          {generation && (
+            <div className="mt-3">
+              <Link href={`/generations/${generation.slug}`}
+                className="inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-400 hover:text-blue-400 hover:border-blue-500/30 transition-colors">
+                <span>🏸</span>
+                <span>{generation.label}</span>
+              </Link>
+            </div>
+          )}
           {player.bio && (
             <p className="text-gray-300 mt-3 max-w-2xl text-sm leading-relaxed">{player.bio}</p>
           )}

@@ -10,6 +10,7 @@ const navLinks = [
   { href: "/countries", label: "Countries" },
   { href: "/tournaments", label: "Tournaments" },
   { href: "/stats", label: "Records" },
+  { href: "/generations", label: "Generations" },
   { href: "/head-to-head", label: "H2H" },
   { href: "/olympics", label: "Olympics" },
   { href: "/team-cups", label: "Team Cups" },

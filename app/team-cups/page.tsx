@@ -65,8 +65,30 @@ export default async function TeamCupsPage({
     where: { type, year: selectedYear },
     include: {
       results: true,
+      squads: {
+        include: {
+          Player: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              worldRanking: true,
+              country: true,
+            },
+          },
+        },
+        orderBy: [{ category: 'asc' }, { slotRank: 'asc' }],
+      },
     },
   })
+
+  // Group squad rows by country for easy lookup.
+  type SquadRow = NonNullable<typeof event>['squads'][number]
+  const squadByCountry = new Map<string, SquadRow[]>()
+  for (const s of event?.squads ?? []) {
+    if (!squadByCountry.has(s.country)) squadByCountry.set(s.country, [])
+    squadByCountry.get(s.country)!.push(s)
+  }
 
   const results = (event?.results ?? []).slice().sort((a, b) => {
     const rf = (FINISH_RANK[a.finish] ?? 99) - (FINISH_RANK[b.finish] ?? 99)
@@ -170,49 +192,126 @@ export default async function TeamCupsPage({
           ))}
         </div>
 
-        {/* Selected event table */}
+        {/* Selected event — summary table */}
         {event ? (
-          <section className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden mb-8">
-            <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between">
-              <div>
-                <div className="font-bold">{TYPE_LABEL[type]} {selectedYear}</div>
-                <div className="text-xs text-slate-300">
-                  {TYPE_SUB[type]}
-                  {event.host ? ` · Hosted in ${event.host}` : ''}
+          <>
+            <section className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden mb-6">
+              <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between">
+                <div>
+                  <div className="font-bold">{TYPE_LABEL[type]} {selectedYear}</div>
+                  <div className="text-xs text-slate-300">
+                    {TYPE_SUB[type]}
+                    {event.host ? ` · Hosted in ${event.host}` : ''}
+                  </div>
                 </div>
+                <div className="text-xs text-slate-300">{results.length} countries on record</div>
               </div>
-              <div className="text-xs text-slate-300">{results.length} countries on record</div>
-            </div>
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-xs text-slate-500 uppercase">
-                <tr>
-                  <th className="text-left px-4 py-2">#</th>
-                  <th className="text-left px-4 py-2">Country</th>
-                  <th className="text-left px-4 py-2">Actual finish</th>
-                  <th className="text-right px-4 py-2">Strength score</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {results.map((r, i) => (
-                  <tr key={r.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-2 text-slate-400 font-mono">{i + 1}</td>
-                    <td className="px-4 py-2">
-                      <span className="mr-1.5">{getFlag(r.country)}</span>
-                      <span className="font-semibold text-slate-800">{r.country}</span>
-                    </td>
-                    <td className="px-4 py-2">
-                      <span className={`text-[10px] font-bold uppercase tracking-wide border rounded px-1.5 py-0.5 ${FINISH_COLOR[r.finish] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                        {FINISH_LABEL[r.finish] || r.finish}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-right font-mono tabular-nums text-slate-700">
-                      {r.teamScore == null ? <span className="text-slate-400">pending…</span> : r.teamScore.toFixed(0)}
-                    </td>
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-xs text-slate-500 uppercase">
+                  <tr>
+                    <th className="text-left px-4 py-2">#</th>
+                    <th className="text-left px-4 py-2">Country</th>
+                    <th className="text-left px-4 py-2">Actual finish</th>
+                    <th className="text-right px-4 py-2">Strength score</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {results.map((r, i) => (
+                    <tr key={r.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-2 text-slate-400 font-mono">{i + 1}</td>
+                      <td className="px-4 py-2">
+                        <span className="mr-1.5">{getFlag(r.country)}</span>
+                        <span className="font-semibold text-slate-800">{r.country}</span>
+                      </td>
+                      <td className="px-4 py-2">
+                        <span className={`text-[10px] font-bold uppercase tracking-wide border rounded px-1.5 py-0.5 ${FINISH_COLOR[r.finish] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                          {FINISH_LABEL[r.finish] || r.finish}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono tabular-nums text-slate-700">
+                        {r.teamScore == null ? <span className="text-slate-400">—</span> : r.teamScore.toFixed(0)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+
+            {/* Squad breakdown per country */}
+            <section className="mb-8">
+              <h2 className="font-bold text-slate-800 mb-3">Squad breakdown</h2>
+              <p className="text-xs text-slate-500 mb-3">
+                The players whose wins in the 12 months before the event drove
+                each country&apos;s score. &quot;Country rank&quot; = rank inside that
+                country&apos;s talent pool for the category. &quot;World rank&quot; shows
+                the player&apos;s current BWF world ranking (may differ from their
+                ranking at the time of the event).
+              </p>
+              <div className="space-y-3">
+                {results.map(r => {
+                  const squad = squadByCountry.get(r.country) ?? []
+                  return (
+                    <details key={r.id} className="bg-white rounded-lg border border-slate-200 shadow-sm group" open={r.finish === 'CHAMPION'}>
+                      <summary className="cursor-pointer list-none flex items-center justify-between px-4 py-2 hover:bg-slate-50">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{getFlag(r.country)}</span>
+                          <span className="font-semibold text-slate-800">{r.country}</span>
+                          <span className={`text-[10px] font-bold uppercase tracking-wide border rounded px-1.5 py-0.5 ${FINISH_COLOR[r.finish] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                            {FINISH_LABEL[r.finish] || r.finish}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono tabular-nums text-slate-700 text-sm">
+                            {r.teamScore?.toFixed(0) ?? '—'}
+                          </span>
+                          <span className="text-xs text-slate-400 group-open:rotate-90 transition-transform">▸</span>
+                        </div>
+                      </summary>
+                      {squad.length === 0 ? (
+                        <div className="px-4 py-3 text-xs text-slate-500 border-t border-slate-100">
+                          No match data found for this country in the 12 months before the event.
+                        </div>
+                      ) : (
+                        <table className="w-full text-xs border-t border-slate-100">
+                          <thead className="bg-slate-50 text-slate-500 uppercase">
+                            <tr>
+                              <th className="text-left px-4 py-1.5">Slot</th>
+                              <th className="text-left px-4 py-1.5">Player</th>
+                              <th className="text-right px-4 py-1.5">World rank</th>
+                              <th className="text-right px-4 py-1.5">Score</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {squad.map(s => (
+                              <tr key={s.id}>
+                                <td className="px-4 py-1.5 font-mono text-slate-600">
+                                  {s.category} {s.slotRank}
+                                </td>
+                                <td className="px-4 py-1.5">
+                                  <Link
+                                    href={`/players/${s.Player.slug}`}
+                                    className="font-semibold text-slate-800 hover:text-blue-600 hover:underline"
+                                  >
+                                    {s.Player.name}
+                                  </Link>
+                                </td>
+                                <td className="px-4 py-1.5 text-right font-mono tabular-nums text-slate-600">
+                                  {s.Player.worldRanking ? `#${s.Player.worldRanking}` : '—'}
+                                </td>
+                                <td className="px-4 py-1.5 text-right font-mono tabular-nums text-slate-700">
+                                  {s.score.toFixed(1)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </details>
+                  )
+                })}
+              </div>
+            </section>
+          </>
         ) : (
           <div className="bg-white rounded-lg border border-slate-200 p-6 text-slate-500 text-sm">
             No data for this edition yet.

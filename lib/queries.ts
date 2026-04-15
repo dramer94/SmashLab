@@ -533,3 +533,127 @@ export async function getThreeSetStats() {
     ORDER BY category
   `
 }
+
+// ─── Generations ────────────────────────────────────────────────────────────────
+
+export interface GenerationSummary {
+  id: string
+  slug: string
+  country: string
+  label: string
+  birthYearStart: number | null
+  birthYearEnd: number | null
+  description: string | null
+  displayOrder: number
+  playerCount: number
+  titles: number
+  totalMatches: number
+  activeStart: number | null
+  activeEnd: number | null
+  players: {
+    id: string
+    name: string
+    slug: string
+    country: string
+    category: string
+    worldRanking: number | null
+    imageUrl: string | null
+    isActive: boolean
+    matchCount: number
+  }[]
+}
+
+export async function getGenerations(country?: string): Promise<GenerationSummary[]> {
+  type GenRow = {
+    id: string; slug: string; country: string; label: string
+    birthYearStart: number | null; birthYearEnd: number | null
+    description: string | null; displayOrder: number
+    playerCount: number; titles: number; totalMatches: number
+    activeStart: number | null; activeEnd: number | null
+  }
+
+  const rows = country
+    ? await prisma.$queryRaw<GenRow[]>`
+        SELECT
+          g.id, g.slug, g.country, g.label,
+          g."birthYearStart", g."birthYearEnd", g.description, g."displayOrder",
+          COUNT(DISTINCT gp."playerId")::int AS "playerCount",
+          COALESCE(SUM(CASE WHEN m.round = 'F' AND m."winnerId" = gp."playerId" THEN 1 ELSE 0 END), 0)::int AS titles,
+          COALESCE(SUM(p."matchCount"), 0)::int AS "totalMatches",
+          EXTRACT(YEAR FROM MIN(m2.date))::int AS "activeStart",
+          EXTRACT(YEAR FROM MAX(m2.date))::int AS "activeEnd"
+        FROM sl_generation g
+        JOIN sl_generation_player gp ON gp."generationId" = g.id AND gp."isPrimary" = true
+        JOIN sl_player p ON p.id = gp."playerId"
+        LEFT JOIN sl_match m ON (m."player1Id" = gp."playerId" OR m."player2Id" = gp."playerId")
+        LEFT JOIN sl_match m2 ON (m2."player1Id" = gp."playerId" OR m2."player2Id" = gp."playerId")
+        WHERE g.country = ${country}
+        GROUP BY g.id, g.slug, g.country, g.label, g."birthYearStart", g."birthYearEnd", g.description, g."displayOrder"
+        ORDER BY g."displayOrder" DESC, g."birthYearStart" DESC NULLS LAST
+      `
+    : await prisma.$queryRaw<GenRow[]>`
+        SELECT
+          g.id, g.slug, g.country, g.label,
+          g."birthYearStart", g."birthYearEnd", g.description, g."displayOrder",
+          COUNT(DISTINCT gp."playerId")::int AS "playerCount",
+          COALESCE(SUM(CASE WHEN m.round = 'F' AND m."winnerId" = gp."playerId" THEN 1 ELSE 0 END), 0)::int AS titles,
+          COALESCE(SUM(p."matchCount"), 0)::int AS "totalMatches",
+          EXTRACT(YEAR FROM MIN(m2.date))::int AS "activeStart",
+          EXTRACT(YEAR FROM MAX(m2.date))::int AS "activeEnd"
+        FROM sl_generation g
+        JOIN sl_generation_player gp ON gp."generationId" = g.id AND gp."isPrimary" = true
+        JOIN sl_player p ON p.id = gp."playerId"
+        LEFT JOIN sl_match m ON (m."player1Id" = gp."playerId" OR m."player2Id" = gp."playerId")
+        LEFT JOIN sl_match m2 ON (m2."player1Id" = gp."playerId" OR m2."player2Id" = gp."playerId")
+        GROUP BY g.id, g.slug, g.country, g.label, g."birthYearStart", g."birthYearEnd", g.description, g."displayOrder"
+        ORDER BY g.country, g."displayOrder" DESC, g."birthYearStart" DESC NULLS LAST
+      `
+
+  // Fetch top 6 players per generation (by matchCount)
+  const results: GenerationSummary[] = []
+  for (const row of rows) {
+    type PlayerRow = { id: string; name: string; slug: string; country: string; category: string; worldRanking: number | null; imageUrl: string | null; isActive: boolean; matchCount: number }
+    const players = await prisma.$queryRaw<PlayerRow[]>`
+      SELECT p.id, p.name, p.slug, p.country, p.category, p."worldRanking", p."imageUrl", p."isActive", p."matchCount"
+      FROM sl_player p
+      JOIN sl_generation_player gp ON gp."playerId" = p.id
+      WHERE gp."generationId" = ${row.id} AND gp."isPrimary" = true
+      ORDER BY p."matchCount" DESC
+      LIMIT 6
+    `
+    results.push({ ...row, players })
+  }
+  return results
+}
+
+export async function getGenerationBySlug(slug: string): Promise<GenerationSummary | null> {
+  const gens = await prisma.$queryRaw<{ id: string; country: string }[]>`
+    SELECT id, country FROM sl_generation WHERE slug = ${slug} LIMIT 1
+  `
+  if (!gens[0]) return null
+  const [gen] = await getGenerations(gens[0].country)
+  const found = (await getGenerations(gens[0].country)).find(g => g.slug === slug)
+  if (!found) return null
+
+  // For detail page: get ALL players (not just 6)
+  type PlayerRow = { id: string; name: string; slug: string; country: string; category: string; worldRanking: number | null; imageUrl: string | null; isActive: boolean; matchCount: number }
+  const allPlayers = await prisma.$queryRaw<PlayerRow[]>`
+    SELECT p.id, p.name, p.slug, p.country, p.category, p."worldRanking", p."imageUrl", p."isActive", p."matchCount"
+    FROM sl_player p
+    JOIN sl_generation_player gp ON gp."playerId" = p.id
+    WHERE gp."generationId" = ${found.id} AND gp."isPrimary" = true
+    ORDER BY p."matchCount" DESC
+  `
+  return { ...found, players: allPlayers }
+}
+
+export async function getPlayerGeneration(playerId: string): Promise<{ slug: string; label: string; country: string } | null> {
+  const rows = await prisma.$queryRaw<{ slug: string; label: string; country: string }[]>`
+    SELECT g.slug, g.label, g.country
+    FROM sl_generation g
+    JOIN sl_generation_player gp ON gp."generationId" = g.id
+    WHERE gp."playerId" = ${playerId} AND gp."isPrimary" = true
+    LIMIT 1
+  `
+  return rows[0] ?? null
+}
