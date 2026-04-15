@@ -1,6 +1,7 @@
 {
   "_note": "Hand-curated badminton player generations. Edit and re-run scripts/seed-generations.ts to apply changes.",
   "generations": [
+
     {
       "slug": "mas-sidek-era",
       "country": "MAS",
@@ -11,32 +12,92 @@
       "description": "Malaysia's first golden generation. The Sidek brothers — Razif, Jalani, Misbun, Rashid — along with Foo Kok Keong and Cheah Soon Kit, dominated the Thomas Cup and put Malaysia on the world map in the 1980s and early 90s. Razif and Jalani won the 1992 Olympic bronze in doubles; Misbun was world No.1 in singles.",
       "playerSlugs": ["razif-sidek", "jalani-sidek", "misbun-sidek", "rashid-sidek", "kok-keong-foo", "soon-kit-cheah"]
     },
+
+    {
+      "slug": "mas-transition-era",
+      "country": "MAS",
+      "label": "The Choong Hann & Hafiz Era",
+      "birthYearStart": 1972,
+      "birthYearEnd": 1979,
+      "displayOrder": 15,
+      "description": "The bridge between Malaysia's Sidek-era dominance and the Lee Chong Wei golden age. Choong Hann Wong was a silky singles player who reached world No.5 and won multiple Super Series titles. Muhammad Hafiz Hashim and Mohd Zakry Abdul Latif gave Malaysia two world-class singles threats simultaneously. Mew Choo Wong was a two-time Olympian who won the 2006 Commonwealth Games singles gold.",
+      "playerSlugs": [
+        "choong-hann-wong",
+        "muhammad-hafiz-hashim",
+        "mohd-zakry-abdul-latif",
+        "tsuen-seng-lee",
+        "mew-choo-wong",
+        "eei-hui-chin"
+      ]
+    },
+
     {
       "slug": "mas-lcw-era",
       "country": "MAS",
       "label": "The Lee Chong Wei Era",
       "birthYearStart": 1980,
-      "birthYearEnd": 1991,
+      "birthYearEnd": 1988,
       "displayOrder": 20,
-      "description": "Anchored by Lee Chong Wei — 3× Olympic silver medalist, world No.1 for a record 348 weeks. This generation also produced Kien Keat Koo and Tan Boon Heong (back-to-back All England doubles champions 2006–07), Goh Liu Ying (2016 Olympic mixed doubles silver), Wong Mew Choo, and Eei Hui Chin.",
+      "description": "Anchored by Lee Chong Wei — 3× Olympic silver medalist, world No.1 for a record 348 weeks, often considered Malaysia's greatest-ever athlete. This cohort also produced Kien Keat Koo and Tan Boon Heong (back-to-back All England doubles champions 2006–07) and Chong Wei Feng, a world-class doubles specialist.",
       "playerSlugs": [
-        "lee-chong-wei", "goh-liu-ying", "kien-keat-koo", "tan-boon-heong",
-        "eei-hui-chin", "wong-mew-choo", "goh-v-shem", "tan-wee-kiong-022485",
-        "chong-wei-feng", "peck-yen-wei"
+        "lee-chong-wei",
+        "kien-keat-koo",
+        "tan-boon-heong",
+        "chong-wei-feng",
+        "peck-yen-wei"
       ]
     },
+
+    {
+      "slug": "mas-bridge-gen",
+      "country": "MAS",
+      "label": "The Lost Generation",
+      "birthYearStart": 1988,
+      "birthYearEnd": 1996,
+      "displayOrder": 25,
+      "description": "Sandwiched between two golden eras, this cohort carried Malaysia during the transition years. Goh V Shem and Tan Wee Kiong were a formidable doubles pair who competed at the highest level. Goh Liu Ying and Chan Peng Soon won the 2016 Olympic silver in mixed doubles — Malaysia's first Olympic medal in 20 years. Goh Soon Huat was a consistent world-tour performer.",
+      "playerSlugs": [
+        "goh-v-shem",
+        "tan-wee-kiong-022485",
+        "goh-liu-ying",
+        "chan-peng-soon",
+        "goh-soon-huat"
+      ]
+    },
+
     {
       "slug": "mas-new-wave",
       "country": "MAS",
       "label": "The New Wave",
       "birthYearStart": 1996,
-      "birthYearEnd": 2004,
+      "birthYearEnd": 2005,
       "displayOrder": 30,
       "description": "Malaysia's next golden generation. Lee Zii Jia won the 2021 All England. Aaron Chia and Soh Wooi Yik claimed Olympic bronze in Tokyo. Pearly Tan and M. Thinaah became the first Malaysian pair to reach a World Championship women's doubles final. This generation is expected to dominate through the 2028 Los Angeles Olympics.",
       "playerSlugs": [
-        "lee-zii-jia", "aaron-chia", "soh-wooi-yik", "pearly-tan",
-        "muralitharan-thinaah-030213", "chen-tang-jie", "tze-yong-ng",
-        "man-wei-chong", "toh-ee-wei"
+        "lee-zii-jia",
+        "aaron-chia",
+        "soh-wooi-yik",
+        "pearly-tan",
+        "muralitharan-thinaah-030213",
+        "chen-tang-jie",
+        "tze-yong-ng",
+        "man-wei-chong",
+        "toh-ee-wei"
+      ]
+    },
+
+    {
+      "slug": "ina-legends",
+      "country": "INA",
+      "label": "The Legends Era",
+      "birthYearStart": 1960,
+      "birthYearEnd": 1974,
+      "displayOrder": 5,
+      "description": "Indonesia's foundational generation of champions. Susi Susanti and Alan Budikusuma both won Olympic gold at Barcelona 1992 — and married each other. Rexy Mainaky and Ricky Subagja won the 1996 Olympic men's doubles gold. Icuk Sugiarto was a two-time World Champion in the 1980s. This era gave Indonesia its identity as a badminton superpower.",
+      "playerSlugs": [
+        "rexy-mainaky",
+        "ricky-achmad-subagdja",
+        "icuk-sugiarto"
       ]
     },
 
@@ -45,15 +106,21 @@
       "country": "INA",
       "label": "The Golden Era",
       "birthYearStart": 1974,
-      "birthYearEnd": 1985,
+      "birthYearEnd": 1986,
       "displayOrder": 10,
-      "description": "Indonesia's most decorated generation — Taufik Hidayat (2004 Olympic gold), Markis Kido & Hendra Setiawan (2008 Olympic gold), Nova Widianto & Lilyana Natsir (multiple world champions in mixed doubles). This era saw Indonesia dominate the Thomas Cup with some of the most flamboyant players the sport has ever seen.",
+      "description": "Indonesia's most decorated modern generation — Taufik Hidayat (2004 Olympic gold), Markis Kido & Hendra Setiawan (2008 Olympic gold), Nova Widianto & Lilyana Natsir (multiple world champions in mixed doubles). This era saw Indonesia dominate the Thomas Cup with some of the most flamboyant players the sport has ever seen.",
       "playerSlugs": [
-        "taufik-hidayat", "markis-kido", "hendra-setiawan",
-        "sony-dwi-kuncoro", "maria-kristin-yulianti", "nova-widianto",
-        "hillary-lilyana-supit-064519", "candra-wijaya"
+        "taufik-hidayat",
+        "markis-kido",
+        "hendra-setiawan",
+        "sony-dwi-kuncoro",
+        "maria-kristin-yulianti",
+        "nova-widianto",
+        "hillary-lilyana-supit-064519",
+        "candra-wijaya"
       ]
     },
+
     {
       "slug": "ina-next-gen",
       "country": "INA",
@@ -63,9 +130,34 @@
       "displayOrder": 20,
       "description": "Kevin Sanjaya Sukamuljo and Marcus Fernaldi Gideon — the 'Minions' — redefined men's doubles with explosive net play, spending years ranked No.1. Anthony Sinisuka Ginting and Jonatan Christie lead the singles revival. Greysia Polii and Apriyani Rahayu won Olympic gold in Tokyo 2020.",
       "playerSlugs": [
-        "kevin-sanjaya-sukamuljo", "marcus-fernaldi-gideon",
-        "anthony-sinisuka-ginting", "jonatan-christie",
-        "greysia-polii", "apriyani-rahayu", "fajar-alfian", "muhammad-rian-ardianto"
+        "kevin-sanjaya-sukamuljo",
+        "marcus-fernaldi-gideon",
+        "anthony-sinisuka-ginting",
+        "jonatan-christie",
+        "greysia-polii",
+        "apriyani-rahayu",
+        "fajar-alfian",
+        "muhammad-rian-ardianto"
+      ]
+    },
+
+    {
+      "slug": "chn-pre-lin-dan",
+      "country": "CHN",
+      "label": "The Dynasty Builders",
+      "birthYearStart": 1972,
+      "birthYearEnd": 1983,
+      "displayOrder": 5,
+      "description": "The generation that built China's all-conquering badminton machine. Zhang Jun and Gao Ling won two Olympic golds together in mixed doubles. Zhang Ning won back-to-back Olympic golds in women's singles (2004, 2008). Xia Xuanze and Chen Hong gave China world-class men's singles depth. This cohort laid the foundation for the Lin Dan era that followed.",
+      "playerSlugs": [
+        "zhang-jun",
+        "gao-ling",
+        "zhang-ning",
+        "xia-xuanze",
+        "chen-hong",
+        "gong-ruina",
+        "ge-fei",
+        "gu-jun"
       ]
     },
 
@@ -74,15 +166,23 @@
       "country": "CHN",
       "label": "The Lin Dan Era",
       "birthYearStart": 1982,
-      "birthYearEnd": 1992,
+      "birthYearEnd": 1993,
       "displayOrder": 10,
       "description": "The most dominant generation in badminton history. Lin Dan — 2× Olympic champion, 5× World Champion — is widely regarded as the greatest of all time. Chen Long won 2016 Olympic gold. Zhao Yunlei won 2 Olympic golds. China swept all five disciplines at the 2012 London Olympics.",
       "playerSlugs": [
-        "lin-dan", "chen-long", "cai-yun", "fu-haifeng",
-        "wang-yihan-019004", "zhao-yunlei", "zhang-nan", "tian-qing",
-        "chen-jin", "bao-chunlai"
+        "lin-dan",
+        "chen-long",
+        "cai-yun",
+        "fu-haifeng",
+        "wang-yihan-019004",
+        "zhao-yunlei",
+        "zhang-nan",
+        "tian-qing",
+        "chen-jin",
+        "bao-chunlai"
       ]
     },
+
     {
       "slug": "chn-current",
       "country": "CHN",
@@ -92,9 +192,32 @@
       "displayOrder": 20,
       "description": "Shi Yuqi and He Bingjiao lead China's current wave. Wang Yilyu and Huang Dongping won Tokyo Olympic gold in mixed doubles. Li Junhui and Liu Yuchen are perennial men's doubles challengers. Chen Yufei won 2020 Olympic gold in women's singles. Jia Yifan has been a dominant force in women's doubles for over a decade.",
       "playerSlugs": [
-        "shi-yuqi", "he-bingjiao", "wang-yilyu-053166", "huang-dongping-045720",
-        "chen-yufei-037813", "zheng-siwei", "jia-yifan-027606",
-        "li-junhui-038031", "liu-yuchen-048637"
+        "shi-yuqi",
+        "he-bingjiao",
+        "wang-yilyu-053166",
+        "huang-dongping-045720",
+        "chen-yufei-037813",
+        "zheng-siwei",
+        "jia-yifan-027606",
+        "li-junhui-038031",
+        "liu-yuchen-048637"
+      ]
+    },
+
+    {
+      "slug": "kor-classic-era",
+      "country": "KOR",
+      "label": "The Park Joo-bong Era",
+      "birthYearStart": 1964,
+      "birthYearEnd": 1980,
+      "displayOrder": 5,
+      "description": "Korea's first wave of world-beaters. Bang Soo-hyun won 1992 Olympic women's singles gold. Gil Young-ah won 1992 Olympic mixed doubles gold. Lee Hyun-il was a two-time World Championship finalist. This generation proved Korea could challenge China and Indonesia at the very top.",
+      "playerSlugs": [
+        "bang-soo-hyun",
+        "gil-young-ah",
+        "lee-hyun-il",
+        "ra-kyung-min",
+        "kim-dong-moon-005404"
       ]
     },
 
@@ -107,21 +230,46 @@
       "displayOrder": 10,
       "description": "Lee Yong-dae — 2008 Olympic gold in mixed doubles, 2012 Olympic silver in men's doubles — was the face of Korean badminton. Son Wan-ho was a consistent world-class singles player. Jung Jae-wook formed one of Korea's most successful doubles partnerships.",
       "playerSlugs": [
-        "lee-yong-dae-018006", "son-wan-ho", "jung-jae-wook-028857",
-        "ha-jung-eun", "kim-min-jung"
+        "lee-yong-dae-018006",
+        "son-wan-ho",
+        "jung-jae-wook-028857",
+        "ha-jung-eun",
+        "kim-min-jung"
       ]
     },
+
     {
       "slug": "kor-current",
       "country": "KOR",
       "label": "The An Se-young Generation",
       "birthYearStart": 1995,
-      "birthYearEnd": 2004,
+      "birthYearEnd": 2005,
       "displayOrder": 20,
       "description": "An Se-young — 2024 Paris Olympic gold medalist and world No.1 — headlines Korea's exciting current generation. Kim Won-ho and Seo Seung-jae are a formidable doubles partnership. Chung Eui-seok and Baek Ha-na have been competitive on the world circuit.",
       "playerSlugs": [
-        "an-se-young", "kim-won-ho", "seo-seung-jae",
-        "baek-ha-na", "lee-so-hee", "chung-eui-seok-053183", "kim-jae-hyeon"
+        "an-se-young",
+        "kim-won-ho",
+        "seo-seung-jae",
+        "baek-ha-na",
+        "lee-so-hee",
+        "chung-eui-seok-053183",
+        "kim-jae-hyeon"
+      ]
+    },
+
+    {
+      "slug": "den-peter-gade-era",
+      "country": "DEN",
+      "label": "The Peter Gade Era",
+      "birthYearStart": 1975,
+      "birthYearEnd": 1989,
+      "displayOrder": 5,
+      "description": "Peter Gade was world No.1 for 11 months and a consistent World Championship finalist — the player who proved Danes could compete at the top level in singles. Poul-Erik Hoyer shocked the world by winning 1996 Olympic gold. Mathias Boe and Carsten Mogensen were a formidable doubles pair who spent time at world No.1.",
+      "playerSlugs": [
+        "peter-hoeg-gade",
+        "poul-erik-hoyer",
+        "mathias-boe",
+        "carsten-mogensen"
       ]
     },
 
@@ -130,12 +278,14 @@
       "country": "DEN",
       "label": "Denmark's Golden Generation",
       "birthYearStart": 1990,
-      "birthYearEnd": 2000,
+      "birthYearEnd": 2001,
       "displayOrder": 10,
-      "description": "Viktor Axelsen — 2021 Olympic champion, 2× World Champion, ranked No.1 for record periods — is the most dominant men's singles player of his era. Anders Antonsen and Jan O. Jorgensen have also held world No.1. Denmark is the most successful non-Asian badminton nation in modern history.",
+      "description": "Viktor Axelsen — 2021 Olympic champion, 2× World Champion, ranked No.1 for record periods — is the most dominant men's singles player of his era. Anders Antonsen and Rasmus Gemke are consistent world-tour threats. Jan O. Jorgensen was a former world No.1. Denmark is the most successful non-Asian badminton nation in modern history.",
       "playerSlugs": [
-        "viktor-axelsen", "anders-antonsen", "rasmus-gemke",
-        "mathias-boe", "carsten-mogensen", "jan-o-jorgensen"
+        "viktor-axelsen",
+        "anders-antonsen",
+        "rasmus-gemke",
+        "jan-o-jorgensen"
       ]
     },
 
@@ -148,9 +298,14 @@
       "displayOrder": 10,
       "description": "Japan's most successful badminton generation. Kento Momota dominated men's singles as world No.1 pre-pandemic with 2 World Championship titles. Akane Yamaguchi is a multiple World Champion. Yuki Fukushima and Sayaka Hirota have been one of the world's top women's doubles pairs for years.",
       "playerSlugs": [
-        "kento-momota", "nozomi-okuhara", "akane-yamaguchi",
-        "hiroyuki-endo", "yuta-watanabe", "yuki-fukushima",
-        "sayaka-hirota", "misaki-matsutomo"
+        "kento-momota",
+        "nozomi-okuhara",
+        "akane-yamaguchi",
+        "hiroyuki-endo",
+        "yuta-watanabe",
+        "yuki-fukushima",
+        "sayaka-hirota",
+        "misaki-matsutomo"
       ]
     },
 
@@ -163,8 +318,11 @@
       "displayOrder": 10,
       "description": "Kunlavut Vitidsarn — 2023 World Champion — is the face of Thailand's new generation. Ratchanok Intanon won the 2013 World Championship at just 18 years old. Dechapol Puavaranukroh and Sapsiree Taerattanachai dominated mixed doubles for a decade, spending years ranked No.1.",
       "playerSlugs": [
-        "kunlavut-vitidsarn", "ratchanok-intanon", "sapsiree-taerattanachai",
-        "dechapol-puavaranukroh", "busanan-ongbamrungphan"
+        "kunlavut-vitidsarn",
+        "ratchanok-intanon",
+        "sapsiree-taerattanachai",
+        "dechapol-puavaranukroh",
+        "busanan-ongbamrungphan"
       ]
     },
 
@@ -177,9 +335,15 @@
       "displayOrder": 10,
       "description": "The generation that put India on the badminton world map. PV Sindhu — 2× Olympic medalist and 2019 World Champion — is one of India's most decorated athletes. Satwiksairaj Rankireddy and Chirag Shetty reached men's doubles world No.1 in 2023. Lakshya Sen won the 2022 All England at just 20.",
       "playerSlugs": [
-        "pusarla-v-sindhu-033575", "lakshya-sen", "satwiksairaj-rankireddy",
-        "chirag-shetty", "kidambi-srikanth", "prannoy-h-s-041661", "saina-nehwal"
+        "pusarla-v-sindhu-033575",
+        "lakshya-sen",
+        "satwiksairaj-rankireddy",
+        "chirag-shetty",
+        "kidambi-srikanth",
+        "prannoy-h-s-041661",
+        "saina-nehwal"
       ]
     }
+
   ]
 }

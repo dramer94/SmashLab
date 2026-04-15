@@ -44,7 +44,7 @@ export function PlayerCard({ player }: { player: Player }) {
           {/* Info */}
           <div className="flex flex-1 flex-col gap-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="truncate font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors">
+              <span className="font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors leading-tight">
                 {player.name}
               </span>
               <span className="text-base" title={player.country}>

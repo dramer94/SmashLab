@@ -77,11 +77,17 @@ export default async function PlayersPage({ searchParams }: PageProps) {
       {/* Malaysian spotlight — only when no filters */}
       {malaysianPlayers.length > 0 && (
         <section className="mb-12">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-2xl">🇲🇾</span>
-            <h2 className="text-xl font-bold text-white">Malaysian Players</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🇲🇾</span>
+              <h2 className="text-xl font-bold text-white">Malaysian Players</h2>
+            </div>
+            <Link href="/generations?country=MAS"
+              className="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1">
+              View by generation →
+            </Link>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {malaysianPlayers.map(p => <PlayerCard key={p.id} player={p} />)}
           </div>
         </section>
@@ -100,7 +106,7 @@ export default async function PlayersPage({ searchParams }: PageProps) {
         {!country && !category && !search && (
           <h2 className="text-xl font-bold text-white mb-4">All Players</h2>
         )}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {result.players.map(p => <PlayerCard key={p.id} player={p} />)}
         </div>
 

@@ -48,15 +48,17 @@ export default async function GenerationDetailPage({ params }: PageProps) {
           <span className="text-4xl">{flag}</span>
           <h1 className="text-3xl font-bold text-white">{gen.label}</h1>
         </div>
-        <div className="flex flex-wrap gap-3 text-sm text-gray-400 mb-4">
+        <div className="flex flex-wrap gap-2 mb-4">
           {yearRange && (
-            <span className="bg-white/5 border border-white/10 rounded-full px-3 py-1">
-              Born {yearRange}
+            <span className="inline-flex items-center gap-1.5 text-sm px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-400">
+              <span className="text-gray-600 text-xs uppercase tracking-wide">Born</span>
+              <span className="text-white font-medium">{yearRange}</span>
             </span>
           )}
           {activeRange && (
-            <span className="bg-white/5 border border-white/10 rounded-full px-3 py-1">
-              Active {activeRange}
+            <span className="inline-flex items-center gap-1.5 text-sm px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/25 text-blue-300">
+              <span className="text-blue-500 text-xs uppercase tracking-wide">Peak years</span>
+              <span className="font-medium">{activeRange}</span>
             </span>
           )}
         </div>

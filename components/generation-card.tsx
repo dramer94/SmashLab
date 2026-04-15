@@ -26,9 +26,19 @@ export function GenerationCard({ gen }: { gen: GenerationSummary }) {
               {gen.label}
             </h3>
           </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
-            {yearRange && <span>{yearRange}</span>}
-            {activeRange && <span>{activeRange}</span>}
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
+            {yearRange && (
+              <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-gray-400">
+                <span className="text-gray-600">Born</span>
+                <span>{gen.birthYearStart}{gen.birthYearEnd && gen.birthYearEnd !== gen.birthYearStart ? `–${gen.birthYearEnd}` : "+"}</span>
+              </span>
+            )}
+            {activeRange && (
+              <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                <span className="text-blue-600">Peak</span>
+                <span>{gen.activeStart}{gen.activeEnd && gen.activeEnd !== gen.activeStart ? `–${gen.activeEnd}` : "–present"}</span>
+              </span>
+            )}
           </div>
         </div>
 
