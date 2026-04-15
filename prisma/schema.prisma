@@ -99,6 +99,42 @@ model SlExternalStat {
   @@map("sl_external_stat")
 }
 
+// One row per edition of a team event (Thomas Cup 2022, Uber Cup 2022, etc.).
+model SlTeamEvent {
+  id        String   @id @default(cuid())
+  type      String   // THOMAS | UBER | SUDIRMAN
+  year      Int
+  startDate DateTime?
+  endDate   DateTime?
+  host      String?
+  createdAt DateTime @default(now())
+
+  results   SlTeamEventResult[]
+
+  @@unique([type, year])
+  @@index([type])
+  @@index([year])
+  @@map("sl_team_event")
+}
+
+// One row per country that participated in a given team event. finish is
+// hand-entered from historical records; teamScore is recomputed from match
+// data.
+model SlTeamEventResult {
+  id          String   @id @default(cuid())
+  teamEventId String
+  country     String   // 3-letter code (MAS, CHN, INA, ...)
+  finish      String   // CHAMPION | RUNNER_UP | SEMI_FINAL | QUARTER_FINAL | GROUP_STAGE | DID_NOT_QUALIFY
+  teamScore   Float?   // computed via scripts/compute-team-scores.ts
+  computedAt  DateTime?
+
+  TeamEvent   SlTeamEvent @relation(fields: [teamEventId], references: [id], onDelete: Cascade)
+
+  @@unique([teamEventId, country])
+  @@index([country])
+  @@map("sl_team_event_result")
+}
+
 model SlSyncLog {
   id                String    @id @default(cuid())
   startedAt         DateTime  @default(now())
