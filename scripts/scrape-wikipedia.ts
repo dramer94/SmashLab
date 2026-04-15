@@ -524,7 +524,7 @@ async function main() {
   // European and Asian championship dates (approximate — update yearly)
   const CHAMP_DATES: Record<string, { start: string; end: string; location: string; country: string }> = {
     [`${year}_European_Badminton_Championships`]: { start: `${year}-04-06`, end: `${year}-04-12`, location: 'Huelva', country: 'Spain' },
-    [`${year}_Badminton_Asia_Championships`]: { start: `${year}-04-22`, end: `${year}-04-27`, location: 'Ningbo', country: 'China' },
+    [`${year}_Badminton_Asia_Championships`]: { start: `${year}-04-07`, end: `${year}-04-12`, location: 'Ningbo', country: 'China' },
   }
 
   const championships = [
