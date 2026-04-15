@@ -1,6 +1,6 @@
 /**
- * Fixes matchCount for doubles players who appear as partner text but not as FK.
- * Uses a single bulk UPDATE instead of N+1 queries.
+ * Fixes matchCount for doubles players stored as partner text (player1Partner / player2Partner).
+ * Uses a CTE UNION approach — far more efficient than correlated subqueries.
  *
  * Run: node --experimental-strip-types scripts/sync-partner-matchcounts.ts
  */
@@ -8,34 +8,57 @@
 import { prisma } from '../lib/prisma.ts'
 
 async function main() {
-  console.log('SmashLab — Sync Partner Match Counts (bulk)')
+  console.log('SmashLab — Sync Partner Match Counts')
 
-  // Single UPDATE: recompute matchCount for all players who have partner appearances
-  const result = await prisma.$executeRaw`
-    UPDATE sl_player p
-    SET "matchCount" = (
-      SELECT COUNT(*)::int
-      FROM sl_match m
-      WHERE m."player1Id" = p.id
-         OR m."player2Id" = p.id
-         OR m."player1Partner" = p.name
-         OR m."player2Partner" = p.name
+  // Step 1: Build complete participation counts via UNION (uses indexes, no correlated scan)
+  const counts = await prisma.$queryRaw<{ player_id: string; total: number }[]>`
+    WITH participations AS (
+      SELECT "player1Id" AS player_id, id AS match_id FROM sl_match
+      UNION ALL
+      SELECT "player2Id", id FROM sl_match
+      UNION ALL
+      SELECT p.id, m.id
+        FROM sl_match m
+        JOIN sl_player p ON p.name = m."player1Partner"
+        WHERE m."player1Partner" IS NOT NULL
+      UNION ALL
+      SELECT p.id, m.id
+        FROM sl_match m
+        JOIN sl_player p ON p.name = m."player2Partner"
+        WHERE m."player2Partner" IS NOT NULL
     )
-    WHERE EXISTS (
-      SELECT 1 FROM sl_match m
-      WHERE m."player1Partner" = p.name OR m."player2Partner" = p.name
-    )
+    SELECT player_id, COUNT(DISTINCT match_id)::int AS total
+    FROM participations
+    GROUP BY player_id
   `
 
-  console.log(`Updated ${result} player records.`)
+  console.log(`Computed counts for ${counts.length} players.`)
 
-  // Verify Soh Wooi Yik
+  // Step 2: Bulk update only those whose count changed
+  let updated = 0
+  const BATCH = 100
+  for (let i = 0; i < counts.length; i += BATCH) {
+    const batch = counts.slice(i, i + BATCH)
+    for (const row of batch) {
+      await prisma.$executeRaw`
+        UPDATE sl_player SET "matchCount" = ${row.total}
+        WHERE id = ${row.player_id} AND "matchCount" != ${row.total}
+      `
+      updated++
+    }
+    process.stdout.write(`\r  Updated ${Math.min(i + BATCH, counts.length)}/${counts.length}...`)
+  }
+
+  console.log(`\nDone. Processed ${counts.length} players, ${updated} records updated.`)
+
+  // Verify key players
   const check = await prisma.$queryRaw<{ name: string; matchCount: number }[]>`
     SELECT name, "matchCount" FROM sl_player
-    WHERE name = 'SOH Wooi Yik' OR LOWER(name) LIKE '%soh wooi%'
-    LIMIT 3
+    WHERE name IN ('SOH Wooi Yik', 'Aaron CHIA', 'Pearly TAN', 'Muralitharan THINAAH')
+    ORDER BY name
   `
-  console.log('Verification:', check)
+  console.log('\nKey player verification:')
+  check.forEach(p => console.log(`  ${p.name}: ${p.matchCount} matches`))
 
   await prisma.$disconnect()
 }
