@@ -5,7 +5,8 @@
  * Usage: node --experimental-strip-types scripts/scrape-stats.ts
  */
 
-import { prisma } from '../lib/prisma.ts'
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { prisma } = require('../lib/prisma')
 
 const BASE = 'https://www.badmintonstatistics.net'
 const HEADERS = {
