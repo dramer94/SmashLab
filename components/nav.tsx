@@ -14,6 +14,7 @@ const navLinks = [
   { href: "/head-to-head", label: "H2H" },
   { href: "/olympics", label: "Olympics" },
   { href: "/team-cups", label: "Team Cups" },
+  { href: "/analysis", label: "Rally Analysis" },
 ]
 
 export function Nav() {
@@ -62,7 +63,7 @@ export function Nav() {
       <div
         className={cn(
           "overflow-hidden transition-all duration-200 ease-in-out md:hidden",
-          mobileOpen ? "max-h-64" : "max-h-0"
+          mobileOpen ? "max-h-96" : "max-h-0"
         )}
       >
         <div className="space-y-1 px-4 pb-4">
