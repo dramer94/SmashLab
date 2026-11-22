@@ -1,3 +1,4 @@
+import { onsetScore } from "./audio"
 import { depthFromNet, dist } from "./geometry"
 import {
   SHOT_TYPES,
@@ -136,7 +137,7 @@ export function buildResult(session: Session): AnalysisResult {
   type Raw = { id: string; t: number; manual: boolean; level: number | null }
   const raws: Raw[] = [
     ...session.onsets
-      .filter((o) => o.rise >= settings.sensitivityDb && o.t >= range.start && o.t <= range.end)
+      .filter((o) => onsetScore(o) >= settings.sensitivityDb && o.t >= range.start && o.t <= range.end)
       .map((o) => ({ id: `a${Math.round(o.t * 1000)}`, t: o.t, manual: false, level: o.level })),
     ...session.manualShots.map((m) => ({ id: m.id, t: m.t, manual: true, level: null })),
   ]

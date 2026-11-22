@@ -2,6 +2,16 @@ import type { Onset } from "./types"
 
 /** Lowest attack sharpness kept as a candidate; the UI filters above this. */
 export const MIN_CANDIDATE_RISE_DB = 6
+
+/**
+ * Detection score used by the sensitivity filter: how far a hit stands out
+ * from the surrounding second of sound. Applause and chatter keep the whole
+ * second loud, so their claps score low; a racket hit in a quiet hall scores
+ * high. Older saved analyses have no contrast and fall back to the rise.
+ */
+export function onsetScore(o: Onset): number {
+  return o.contrast ?? o.rise
+}
 const HOP_S = 0.005
 const MIN_GAP_S = 0.22
 
@@ -60,6 +70,7 @@ export function detectOnsets(samples: Float32Array, sr: number, offsetS = 0): On
   }
 
   const peaks: Onset[] = []
+  const ctxR = Math.round(0.6 / HOP_S)
   const radius = Math.round(0.06 / HOP_S)
   for (let k = 12; k < n; k++) {
     const v = nov[k]
@@ -76,6 +87,7 @@ export function detectOnsets(samples: Float32Array, sr: number, offsetS = 0): On
       t: round3(offsetS + (k * hop + hop) / sr),
       rise: round1(v),
       level: round1(level - floor),
+      contrast: round1(level - localMedian(db, k, ctxR)),
     })
   }
 
@@ -120,6 +132,14 @@ export async function decodeAudio(
   } finally {
     ctx.close().catch(() => {})
   }
+}
+
+/** Median loudness in the ±0.6 s around frame k: high during applause or chatter. */
+function localMedian(db: Float32Array, k: number, r: number) {
+  const a: number[] = []
+  for (let j = Math.max(0, k - r); j <= Math.min(db.length - 1, k + r); j += 2) a.push(db[j])
+  a.sort((x, y) => x - y)
+  return a[a.length >> 1]
 }
 
 function round1(v: number) { return Math.round(v * 10) / 10 }

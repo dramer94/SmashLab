@@ -32,6 +32,8 @@ export interface Onset {
   rise: number
   /** Loudness of the hit in dB (relative). Near-side hits are louder. */
   level: number
+  /** How far the hit stands out from the surrounding second of sound (dB). */
+  contrast?: number
 }
 
 /** Player positions on court at one sampled frame. null = not seen. */
@@ -56,7 +58,7 @@ export interface ShotEdit {
 
 export interface AnalysisSettings {
   format: MatchFormat
-  /** Minimum attack sharpness (dB) for a sound to count as a shot. */
+  /** Minimum detection score (dB, see onsetScore) for a sound to count as a shot. */
   sensitivityDb: number
   /** Silence (s) that ends a rally. */
   rallyGapS: number

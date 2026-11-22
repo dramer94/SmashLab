@@ -5,7 +5,7 @@ import { AlertTriangle, FileJson, FolderOpen, Loader2, RotateCcw, Trash2, Upload
 import { CourtMarker, DEFAULT_CORNERS } from "@/components/analysis/court-marker"
 import { VideoReview } from "@/components/analysis/video-review"
 import { CourtMap, PlayersTable, RallyList, ShotTypeChart, SummaryTiles } from "@/components/analysis/results-panels"
-import { decodeAudio, detectOnsets, MIN_CANDIDATE_RISE_DB } from "@/lib/analysis/audio"
+import { decodeAudio, detectOnsets, MIN_CANDIDATE_RISE_DB, onsetScore } from "@/lib/analysis/audio"
 import { trackPlayers } from "@/lib/analysis/vision"
 import { buildResult, other } from "@/lib/analysis/engine"
 import { validateCorners } from "@/lib/analysis/geometry"
@@ -38,7 +38,7 @@ function defaultPlayers(format: MatchFormat): AnalysisSettings["players"] {
 }
 
 function defaultSettings(format: MatchFormat = "singles"): AnalysisSettings {
-  return { format, sensitivityDb: 12, rallyGapS: 3.5, firstServer: "near", players: defaultPlayers(format) }
+  return { format, sensitivityDb: 16, rallyGapS: 3.5, firstServer: "near", players: defaultPlayers(format) }
 }
 
 function readMeta(url: string, file: File): Promise<VideoMeta> {
@@ -158,7 +158,7 @@ export function AnalysisApp() {
 
       const warnings = [...tracked.warnings]
       if (!audio) warnings.unshift("No sound could be read from this video, so shots were not counted automatically. Add them on the timeline with \"Add shot here\".")
-      else if (onsets.filter((o) => o.rise >= draft.settings.sensitivityDb).length < 3)
+      else if (onsets.filter((o) => onsetScore(o) >= draft.settings.sensitivityDb).length < 3)
         warnings.unshift("Very few shot sounds were heard. Raise the sensitivity in Settings, or film closer to the court with less background noise.")
 
       const prev = session && videoKey(session.video) === videoKey(meta) ? session : null
@@ -618,7 +618,7 @@ function PlayerInputs({ settings, onChange }: { settings: AnalysisSettings; onCh
 function SettingsPanel({ session, update }: { session: Session; update: (fn: (s: Session) => Session) => void }) {
   const s = session.settings
   const set = (patch: Partial<AnalysisSettings>) => update((x) => ({ ...x, settings: { ...x.settings, ...patch } }))
-  const countAt = (db: number) => session.onsets.filter((o) => o.rise >= db && o.t >= session.range.start && o.t <= session.range.end).length
+  const countAt = (db: number) => session.onsets.filter((o) => onsetScore(o) >= db && o.t >= session.range.start && o.t <= session.range.end).length
   const removed = Object.values(session.edits).filter((e) => e.deleted).length
   return (
     <div className="space-y-5 rounded-xl border border-white/10 bg-[var(--card)] p-5">
