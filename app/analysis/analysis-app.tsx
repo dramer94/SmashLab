@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AlertTriangle, FileJson, FolderOpen, Loader2, RotateCcw, Trash2, Upload, Video } from "lucide-react"
 import { CourtMarker, DEFAULT_CORNERS, pointNames } from "@/components/analysis/court-marker"
 import { VideoReview } from "@/components/analysis/video-review"
+import { EffectsPanel } from "@/components/analysis/effects-panel"
+import { loadBrand, saveBrand, withDefaults, type Brand } from "@/lib/analysis/effects"
 import { CourtMap, PlayersTable, RallyList, ShotTypeChart, SummaryTiles } from "@/components/analysis/results-panels"
 import { decodeAudio, detectOnsets, MIN_CANDIDATE_RISE_DB, onsetScore } from "@/lib/analysis/audio"
 import { trackPlayers } from "@/lib/analysis/vision"
@@ -78,9 +80,13 @@ export function AnalysisApp() {
   const jsonInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => setSaved(listSaved()), [])
+  const [brand, setBrand] = useState<Brand>({ text: "", logo: null })
+  useEffect(() => setBrand(loadBrand()), [])
+  const changeBrand = useCallback((b: Brand) => { setBrand(b); saveBrand(b) }, [])
   useEffect(() => () => { if (videoUrl) URL.revokeObjectURL(videoUrl) }, [videoUrl])
 
   const result = useMemo(() => (session ? buildResult(session) : null), [session])
+  const effects = useMemo(() => withDefaults(session?.effects), [session?.effects])
 
   // Persist edits (debounced).
   useEffect(() => {
@@ -429,7 +435,18 @@ export function AnalysisApp() {
                 onEditShot={editShot}
                 onAddShot={addShot}
                 seekRequest={seekRequest}
+                effects={effects}
+                brand={brand}
               />
+              <div className="mt-4">
+                <EffectsPanel
+                  session={session}
+                  effects={effects}
+                  onChange={(e) => update((s) => ({ ...s, effects: e }))}
+                  brand={brand}
+                  onBrand={changeBrand}
+                />
+              </div>
             </div>
             <SettingsPanel session={session} update={update} />
           </div>

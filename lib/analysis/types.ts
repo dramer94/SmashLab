@@ -4,6 +4,7 @@
 // baseline, 13.4 = near baseline). The net sits at y = 6.7.
 
 import type { CourtMarks } from "./geometry"
+import type { Effects } from "./effects"
 
 export interface Pt {
   x: number
@@ -105,6 +106,8 @@ export interface Session {
   markTime?: number
   /** Stretches filmed by another camera (close-ups, replays): skipped. */
   offCamera?: { start: number; end: number }[]
+  /** Look of the recorded video. */
+  effects?: Partial<Effects>
 }
 
 export interface Shot {

@@ -5,6 +5,18 @@ import { ChevronLeft, ChevronRight, Download, Film, Pause, Play, Plus, Trash2 } 
 import { buildOverlayModel, drawOverlay, REPLAY_AFTER, REPLAY_BEFORE, REPLAY_RATE, SIDE_COLORS, type OverlayOptions } from "@/lib/analysis/overlay"
 import { SHOT_LABELS } from "@/lib/analysis/engine"
 import { SHOT_TYPES, type AnalysisResult, type Session, type Shot, type ShotEdit, type Side } from "@/lib/analysis/types"
+import { drawEndCard, END_CARD_S, focusView, playCrowd, playHit, replayIds, type Brand, type Effects } from "@/lib/analysis/effects"
+
+/** One shared audio context for sound effects (created on first use, after a click). */
+let audioCtx: AudioContext | null = null
+function getAudio(): AudioContext | null {
+  if (typeof window === "undefined") return null
+  const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+  if (!AC) return null
+  if (!audioCtx) audioCtx = new AC()
+  if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {})
+  return audioCtx
+}
 
 function fmt(t: number) {
   const m = Math.floor(t / 60)
@@ -21,9 +33,13 @@ export function VideoReview({
   onEditShot,
   onAddShot,
   seekRequest,
+  effects,
+  brand,
 }: {
   session: Session
   result: AnalysisResult
+  effects: Effects
+  brand: Brand
   videoUrl: string | null
   selectedId: string | null
   onSelect: (id: string | null) => void
@@ -48,6 +64,19 @@ export function VideoReview({
   const [previewing, setPreviewing] = useState(false)
 
   const model = useMemo(() => buildOverlayModel(session, result), [session, result])
+  const replays = useMemo(() => replayIds(result, session, effects), [result, session, effects])
+  const [logo, setLogo] = useState<HTMLImageElement | null>(null)
+  useEffect(() => {
+    if (!brand.logo) { setLogo(null); return }
+    const img = new Image()
+    img.onload = () => setLogo(img)
+    img.src = brand.logo
+  }, [brand.logo])
+  const brandDraw = useMemo(() => ({ text: brand.text, logo }), [brand.text, logo])
+  /** End-card preview start time (performance.now), if showing. */
+  const endPreviewRef = useRef<number | null>(null)
+  const [endPreview, setEndPreview] = useState(false)
+  const lastSoundT = useRef<number | null>(null)
   const { start, end } = session.range
   const span = Math.max(0.001, end - start)
   const vw = session.video.width || 1280
@@ -61,8 +90,25 @@ export function VideoReview({
     if (!c) return
     const ctx = c.getContext("2d")!
     ctx.clearRect(0, 0, c.width, c.height)
-    drawOverlay(ctx, c.width, c.height, v ? v.currentTime : tRef.current, model, opts, previewRef.current)
-  }, [model, opts])
+    const time = v ? v.currentTime : tRef.current
+    // Focus mode: zoom the <video> itself with CSS; the overlay follows the same window.
+    const view = focusView(session, effects, model.courtToImage, time, c.width, c.height)
+    if (v) {
+      if (view) {
+        const z = c.width / view.sw
+        v.style.transformOrigin = "0 0"
+        v.style.transform = `scale(${z}) translate(${(-view.sx / c.width) * 100}%, ${(-view.sy / c.height) * 100}%)`
+      } else v.style.transform = ""
+    }
+    drawOverlay(ctx, c.width, c.height, time, model, opts, { replay: previewRef.current, effects, brand: brandDraw, view })
+    if (endPreviewRef.current != null) {
+      const k = (performance.now() - endPreviewRef.current) / 1000 / END_CARD_S
+      if (k >= 1) {
+        endPreviewRef.current = null
+        setEndPreview(false)
+      } else drawEndCard(ctx, c.width, c.height, k, result, session, effects, brandDraw)
+    }
+  }, [model, opts, session, effects, brandDraw, result])
 
   // Redraw loop while playing; single redraw otherwise.
   useEffect(() => {
@@ -78,15 +124,28 @@ export function VideoReview({
           setPreviewing(false)
         }
         if (v.currentTime >= end && !v.paused) { v.pause(); v.currentTime = end }
+        // Sound effects while watching (the recording mixes its own).
+        if (playing && exportStop.current == null && (effects.hitSound || effects.crowdSound)) {
+          const prev = lastSoundT.current
+          const now = v.currentTime
+          if (prev != null && now > prev && now - prev < 0.5) {
+            const ac = getAudio()
+            if (ac) {
+              if (effects.hitSound) for (const s of result.shots) if (s.t > prev && s.t <= now) playHit(ac, ac.destination, s.type === "smash" ? 1.4 : 1)
+              if (effects.crowdSound) for (const r of result.rallies) if (r.end + 0.3 > prev && r.end + 0.3 <= now) playCrowd(ac, ac.destination, Math.min(1.4, 0.6 + r.shots.length / 12))
+            }
+          }
+          lastSoundT.current = now
+        } else lastSoundT.current = v.currentTime
         tRef.current = v.currentTime
         setT(v.currentTime)
       }
       draw()
-      if (playing) raf = requestAnimationFrame(loop)
+      if (playing || endPreview) raf = requestAnimationFrame(loop)
     }
     loop()
     return () => cancelAnimationFrame(raf)
-  }, [playing, draw, end, rate])
+  }, [playing, draw, end, rate, endPreview, effects, result])
 
   const seek = useCallback((time: number) => {
     const clamped = Math.max(start, Math.min(end, time))
@@ -171,24 +230,44 @@ export function VideoReview({
     canvas.height = ch
     const ctx = canvas.getContext("2d")!
     const stream = canvas.captureStream(30)
-    try {
-      const vStream = (v as HTMLVideoElement & { captureStream?: () => MediaStream; mozCaptureStream?: () => MediaStream })
-      const src = vStream.captureStream?.() ?? vStream.mozCaptureStream?.()
-      src?.getAudioTracks().forEach((tr) => stream.addTrack(tr))
-    } catch { /* no audio capture */ }
-    const types = ["video/mp4;codecs=avc1,mp4a", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
+    // Audio: the clip's own sound plus synthesised effects, mixed in Web Audio.
+    const ac = getAudio()
+    let mixOut: AudioNode | null = null
+    if (ac) {
+      const dest = ac.createMediaStreamDestination()
+      try {
+        const vStream = v as HTMLVideoElement & { captureStream?: () => MediaStream; mozCaptureStream?: () => MediaStream }
+        const src = vStream.captureStream?.() ?? vStream.mozCaptureStream?.()
+        const tracks = src?.getAudioTracks() ?? []
+        if (tracks.length) ac.createMediaStreamSource(new MediaStream(tracks)).connect(dest)
+      } catch { /* no clip audio: effects only */ }
+      // Effects go to the recording and to the speakers.
+      const fxBus = ac.createGain()
+      fxBus.connect(dest)
+      fxBus.connect(ac.destination)
+      mixOut = fxBus
+      dest.stream.getAudioTracks().forEach((tr) => stream.addTrack(tr))
+    }
+    const types = [
+      "video/mp4;codecs=avc1.42E01F,mp4a.40.2",
+      "video/mp4;codecs=avc1,mp4a",
+      "video/mp4",
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm",
+    ]
     const mime = types.find((m) => MediaRecorder.isTypeSupported(m)) ?? ""
     const rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 6_000_000 } : undefined)
     const chunks: Blob[] = []
     rec.ondataavailable = (e) => e.data.size && chunks.push(e.data)
 
     // The recording plan: the clip in order, with slow-motion replays of the
-    // marked shots inserted just after each rally ends.
+    // chosen shots inserted just after each rally ends.
     type Seg = { from: number; to: number; rate: number; replay: Shot | null }
     const plan: Seg[] = []
     let cursor = start
     for (const r of result.rallies) {
-      const reps = r.shots.filter((x) => x.replay)
+      const reps = r.shots.filter((x) => replays.ids.has(x.id))
       const at = Math.min(end, r.end + 0.8)
       if (!reps.length || at <= cursor) continue
       plan.push({ from: cursor, to: at, rate: 1, replay: null })
@@ -198,7 +277,8 @@ export function VideoReview({
       cursor = at
     }
     if (cursor < end) plan.push({ from: cursor, to: end, rate: 1, replay: null })
-    const totalS = plan.reduce((a, g) => a + (g.to - g.from) / g.rate, 0)
+    const endS = effects.endCard ? END_CARD_S : 0
+    const totalS = plan.reduce((a, g) => a + (g.to - g.from) / g.rate, 0) + endS
     let doneS = 0
 
     let raf = 0
@@ -225,17 +305,29 @@ export function VideoReview({
         v.addEventListener("seeked", () => r(), { once: true })
         v.currentTime = time
       })
+    const kx = vw / cw
+    const ky = vh / ch
     const paint = (replay: Shot | null) => {
-      ctx.drawImage(v, 0, 0, cw, ch)
-      drawOverlay(ctx, cw, ch, v.currentTime, model, opts, replay)
+      const view = focusView(session, effects, model.courtToImage, v.currentTime, cw, ch)
+      if (view) ctx.drawImage(v, view.sx * kx, view.sy * ky, view.sw * kx, view.sh * ky, 0, 0, cw, ch)
+      else ctx.drawImage(v, 0, 0, cw, ch)
+      drawOverlay(ctx, cw, ch, v.currentTime, model, opts, { replay, effects, brand: brandDraw, view })
+    }
+    const sounds = (from: number, to: number, slow: boolean) => {
+      if (!ac || !mixOut || to <= from) return
+      if (effects.hitSound) for (const s of result.shots) if (s.t > from && s.t <= to) playHit(ac, mixOut, s.type === "smash" ? 1.4 : 1)
+      if (effects.crowdSound && !slow) for (const r of result.rallies) if (r.end + 0.3 > from && r.end + 0.3 <= to) playCrowd(ac, mixOut, Math.min(1.4, 0.6 + r.shots.length / 12))
     }
     const playSeg = (g: Seg) =>
       new Promise<void>((resolve) => {
         wake = resolve
         v.playbackRate = g.rate
+        let prevT = v.currentTime
         const frame = () => {
           if (stopped) return resolve()
           paint(g.replay)
+          sounds(prevT, v.currentTime, g.rate < 1)
+          prevT = v.currentTime
           setExporting(Math.min(1, (doneS + Math.max(0, v.currentTime - g.from) / g.rate) / (totalS || 1)))
           if (v.currentTime >= g.to || v.ended) {
             v.pause()
@@ -263,23 +355,38 @@ export function VideoReview({
       await playSeg(g)
       doneS += (g.to - g.from) / g.rate
     }
+    // Closing card over the last frame.
+    if (!stopped && endS) {
+      const lastFrame = document.createElement("canvas")
+      lastFrame.width = cw
+      lastFrame.height = ch
+      lastFrame.getContext("2d")!.drawImage(canvas, 0, 0)
+      if (ac && mixOut && effects.crowdSound) playCrowd(ac, mixOut, 1.2)
+      await new Promise<void>((resolve) => {
+        wake = resolve
+        const t0 = performance.now()
+        const frame = () => {
+          if (stopped) return resolve()
+          const k = (performance.now() - t0) / 1000 / endS
+          ctx.drawImage(lastFrame, 0, 0)
+          drawEndCard(ctx, cw, ch, Math.min(1, k), result, session, effects, brandDraw)
+          setExporting(Math.min(1, (doneS + k * endS) / (totalS || 1)))
+          if (k >= 1) return resolve()
+          raf = requestAnimationFrame(frame)
+        }
+        raf = requestAnimationFrame(frame)
+      })
+    }
     stopped = true
     v.playbackRate = rate
     if (rec.state !== "inactive") rec.stop()
   }
 
-  const replayCount = result.shots.filter((x) => x.replay).length
-  const pickReplays = () => {
-    // The three fastest shots (one per rally), smashes first.
-    const best = new Map<number, Shot>()
-    for (const x of result.shots) {
-      if (x.speedKmh == null) continue
-      const cur = best.get(x.rallyIndex)
-      const score = (y: Shot) => (y.type === "smash" ? 1000 : 0) + (y.speedKmh ?? 0)
-      if (!cur || score(x) > score(cur)) best.set(x.rallyIndex, x)
-    }
-    const top = [...best.values()].sort((a, b) => (b.type === "smash" ? 1000 : 0) + (b.speedKmh ?? 0) - ((a.type === "smash" ? 1000 : 0) + (a.speedKmh ?? 0))).slice(0, 3)
-    top.forEach((x) => onEditShot(x.id, { replay: true }))
+  const replayCount = replays.ids.size
+  const previewEndCard = () => {
+    videoRef.current?.pause()
+    endPreviewRef.current = performance.now()
+    setEndPreview(true)
   }
 
   const editBtn = "rounded-md border border-white/10 px-2.5 py-1.5 text-sm text-gray-200 hover:bg-white/5"
@@ -392,7 +499,7 @@ export function VideoReview({
               height: s.id === selectedId ? 16 : 11,
               marginTop: s.id === selectedId ? -2 : 0,
               background: s.manual ? "transparent" : SIDE_COLORS[s.side],
-              border: `2px solid ${s.id === selectedId ? "#fff" : s.replay ? "#ef4444" : s.manual ? SIDE_COLORS[s.side] : "#111827"}`,
+              border: `2px ${replays.ids.has(s.id) && !s.replay ? "dashed" : "solid"} ${s.id === selectedId ? "#fff" : replays.ids.has(s.id) ? "#ef4444" : s.manual ? SIDE_COLORS[s.side] : "#111827"}`,
             }}
           />
         ))}
@@ -411,11 +518,11 @@ export function VideoReview({
             {selected.manual && <span className="rounded bg-white/10 px-1.5 text-xs text-gray-300">added by you</span>}
             <button
               type="button"
-              onClick={() => onEditShot(selected.id, { replay: !selected.replay })}
-              className={`${editBtn} inline-flex items-center gap-1 ${selected.replay ? "border-red-500/60 bg-red-500/15 text-white" : ""}`}
+              onClick={() => onEditShot(selected.id, { replay: !replays.ids.has(selected.id) })}
+              className={`${editBtn} inline-flex items-center gap-1 ${replays.ids.has(selected.id) ? "border-red-500/60 bg-red-500/15 text-white" : ""}`}
               title="Show this shot again in slow motion in the recorded video"
             >
-              <Film className="h-4 w-4" /> Slow-mo replay {selected.replay ? "on" : "off"}
+              <Film className="h-4 w-4" /> Slow-mo replay {replays.ids.has(selected.id) ? (session.edits[selected.id]?.replay === undefined ? "on (auto)" : "on") : "off"}
             </button>
             {videoUrl && (
               <button type="button" onClick={() => previewReplay(selected)} disabled={previewing} className={`${editBtn} disabled:opacity-50`}>
@@ -466,9 +573,11 @@ export function VideoReview({
 
       {videoUrl && (
         <div className="flex flex-wrap items-center gap-3">
-          <button type="button" onClick={pickReplays} disabled={exporting != null} className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-3 py-1.5 text-sm text-gray-200 hover:bg-white/5 disabled:opacity-50" title="Mark the three fastest shots for slow-motion replays">
-            <Film className="h-4 w-4" /> {replayCount ? `${replayCount} replay${replayCount > 1 ? "s" : ""} marked · add best smashes` : "Add replays of the best smashes"}
-          </button>
+          {effects.endCard && (
+            <button type="button" onClick={previewEndCard} disabled={exporting != null || endPreview} className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-3 py-1.5 text-sm text-gray-200 hover:bg-white/5 disabled:opacity-50">
+              <Film className="h-4 w-4" /> Preview end card
+            </button>
+          )}
           <button type="button" onClick={startExport} disabled={exporting != null} className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-3 py-1.5 text-sm text-gray-200 hover:bg-white/5 disabled:opacity-50">
             <Download className="h-4 w-4" /> Record video with overlay
           </button>
@@ -479,7 +588,9 @@ export function VideoReview({
           )}
           {exportError && <span className="text-sm text-amber-300">{exportError}</span>}
           <span className="text-xs text-gray-500">
-            Plays the clip once in real time and records it with the overlay as shown above{replayCount ? ", with slow-motion replays after the rallies they belong to" : ""}. Shots outlined in red on the timeline get a replay.
+            Plays the clip once in real time and records it with the overlay and effects as shown above
+            {replayCount ? `, with ${replayCount} slow-motion replay${replayCount > 1 ? "s" : ""} after the rallies they belong to` : ""}
+            {effects.endCard ? " and a 5-second end card" : ""}. Shots outlined in red on the timeline get a replay (dashed = picked automatically).
           </span>
         </div>
       )}
