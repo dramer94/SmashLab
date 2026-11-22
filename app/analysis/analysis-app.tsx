@@ -9,6 +9,7 @@ import { loadBrand, saveBrand, withDefaults, type Brand } from "@/lib/analysis/e
 import { CourtMap, PlayersTable, RallyList, ShotTypeChart, SummaryTiles } from "@/components/analysis/results-panels"
 import { decodeAudio, detectOnsets, MIN_CANDIDATE_RISE_DB, onsetScore } from "@/lib/analysis/audio"
 import { trackPlayers } from "@/lib/analysis/vision"
+import { trackShuttle } from "@/lib/analysis/shuttle-track"
 import { buildResult, other } from "@/lib/analysis/engine"
 import { DEFAULT_MARKS, MARK_LINES, validateCorners, type CourtMarks, type MarkLine } from "@/lib/analysis/geometry"
 import { deleteSession, isSession, listSaved, loadSession, saveSession, videoKey, type SavedEntry } from "@/lib/analysis/storage"
@@ -157,11 +158,32 @@ export function AnalysisApp() {
         draft.corners,
         draft.range,
         draft.settings.format,
-        (stage, frac) => setProgress({ stage, frac: stage.startsWith("Reading") ? 0.12 + frac * 0.13 : 0.25 + frac * 0.75 }),
+        (stage, frac) => setProgress({ stage, frac: stage.startsWith("Reading") ? 0.1 + frac * 0.1 : 0.2 + frac * 0.45 }),
         ac.signal,
         10,
         draft.frameTime,
         draft.marks
+      )
+
+      // Shuttle: every frame, but only while rallies are on (found from the hit sounds).
+      const heard = onsets
+        .filter((o) => onsetScore(o) >= draft.settings.sensitivityDb && !tracked.offCamera.some((c) => o.t >= c.start && o.t <= c.end))
+        .map((o) => o.t)
+      const windows: { start: number; end: number }[] = []
+      for (const t of heard) {
+        const last = windows[windows.length - 1]
+        if (last && t - (last.end - 2.2) <= draft.settings.rallyGapS) last.end = Math.min(draft.range.end, t + 2.2)
+        else windows.push({ start: Math.max(draft.range.start, t - 0.5), end: Math.min(draft.range.end, t + 2.2) })
+      }
+      setProgress({ stage: "Tracking the shuttle", frac: 0.65 })
+      const shuttle = await trackShuttle(
+        v,
+        draft.corners,
+        draft.marks,
+        windows,
+        tracked.offCamera,
+        (frac) => setProgress({ stage: "Tracking the shuttle", frac: 0.65 + frac * 0.35 }),
+        ac.signal
       )
       v.removeAttribute("src")
       v.load()
@@ -192,6 +214,7 @@ export function AnalysisApp() {
         hasAudio: !!audio,
         markTime: draft.frameTime,
         offCamera: tracked.offCamera,
+        shuttle,
       }
       setSession(s)
       setSelectedId(null)

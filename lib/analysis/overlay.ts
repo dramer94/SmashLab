@@ -15,6 +15,17 @@ export interface OverlayOptions {
   courtLines: boolean
   miniMap: boolean
   labels: boolean
+  shuttle?: boolean
+}
+
+function lowerBound(arr: { t: number }[], t: number) {
+  let lo = 0, hi = arr.length
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1
+    if (arr[mid].t < t) lo = mid + 1
+    else hi = mid
+  }
+  return lo
 }
 
 export interface OverlayModel {
@@ -209,6 +220,63 @@ export function drawOverlay(
           text(label, bx + 8 * u, by + 11 * u)
         }
       }
+    }
+  }
+
+  // Shuttle trail: the last 0.35 s of seen positions, fading out behind the head.
+  if (opts.shuttle !== false && session.shuttle?.length && !offCam) {
+    const pts = session.shuttle
+    const i1 = lowerBound(pts, t + 0.001)
+    const i0 = lowerBound(pts, t - 0.35)
+    const seg = pts.slice(i0, i1).filter((p, k, a) => k === 0 || p.t - a[k - 1].t < 0.15)
+    if (seg.length && t - seg[seg.length - 1].t < 0.12) {
+      const at = (p: { x: number; y: number }) => {
+        let x = p.x * W, y = p.y * H
+        if (view) { x = (x - view.sx) * zoom; y = (y - view.sy) * zoom }
+        return { x, y }
+      }
+      for (let k = 1; k < seg.length; k++) {
+        const a = at(seg[k - 1]), b = at(seg[k])
+        const f = k / seg.length
+        ctx.strokeStyle = `rgba(250,204,21,${0.15 + 0.75 * f})`
+        ctx.lineWidth = (1.5 + 3.5 * f) * u
+        ctx.beginPath()
+        ctx.moveTo(a.x, a.y)
+        ctx.lineTo(b.x, b.y)
+        ctx.stroke()
+      }
+      const head = at(seg[seg.length - 1])
+      ctx.fillStyle = "#fef08a"
+      ctx.strokeStyle = "rgba(0,0,0,0.6)"
+      ctx.lineWidth = 1.5 * u
+      ctx.beginPath()
+      ctx.arc(head.x, head.y, 4 * u, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.stroke()
+    }
+  }
+
+  // Where the last shot of the rally came down, shown for 2.5 s.
+  if (courtToImage && !offCam) {
+    for (const r of result.rallies) {
+      const l = r.landing
+      if (!l || t < l.t || t > l.t + 2.5) continue
+      const c = toImg({ x: l.x, y: l.y })
+      const s = 10 * u * Math.sqrt(zoom)
+      ctx.strokeStyle = l.in ? "#22c55e" : "#ef4444"
+      ctx.lineWidth = 3 * u
+      ctx.beginPath()
+      ctx.ellipse(c.x, c.y, s * 1.6, s * 0.6, 0, 0, Math.PI * 2)
+      ctx.stroke()
+      const tag = `${l.in ? "IN" : "OUT"}${l.close ? " · CLOSE" : ""}`
+      ctx.font = `800 ${14 * u}px system-ui, sans-serif`
+      ctx.textBaseline = "middle"
+      const tw = ctx.measureText(tag).width
+      ctx.fillStyle = l.in ? "#16a34a" : "#dc2626"
+      roundRect(ctx, c.x - tw / 2 - 8 * u, c.y - s - 30 * u, tw + 16 * u, 22 * u, 11 * u)
+      ctx.fill()
+      ctx.fillStyle = "#ffffff"
+      ctx.fillText(tag, c.x - tw / 2, c.y - s - 19 * u)
     }
   }
 

@@ -54,7 +54,7 @@ export function VideoReview({
   tRef.current = t
   const [playing, setPlaying] = useState(false)
   const [rate, setRate] = useState(1)
-  const [opts, setOpts] = useState<OverlayOptions>({ courtLines: false, miniMap: true, labels: true })
+  const [opts, setOpts] = useState<OverlayOptions>({ courtLines: false, miniMap: true, labels: true, shuttle: true })
   const [exporting, setExporting] = useState<number | null>(null)
   const [exportUrl, setExportUrl] = useState<{ url: string; ext: string } | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
@@ -441,9 +441,9 @@ export function VideoReview({
           <Plus className="h-4 w-4" /> Add shot here
         </button>
         <div className="ml-auto flex flex-wrap items-center gap-3 text-sm text-gray-400">
-          {([["courtLines", "Court lines"], ["labels", "Names"], ["miniMap", "Mini map"]] as const).map(([k, label]) => (
+          {([["shuttle", "Shuttle trail"], ["courtLines", "Court lines"], ["labels", "Names"], ["miniMap", "Mini map"]] as const).map(([k, label]) => (
             <label key={k} className="inline-flex items-center gap-1.5">
-              <input type="checkbox" checked={opts[k]} onChange={(e) => setOpts({ ...opts, [k]: e.target.checked })} className="accent-blue-500" />
+              <input type="checkbox" checked={opts[k] !== false} onChange={(e) => setOpts({ ...opts, [k]: e.target.checked })} className="accent-blue-500" />
               {label}
             </label>
           ))}

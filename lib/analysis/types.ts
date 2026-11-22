@@ -108,6 +108,8 @@ export interface Session {
   offCamera?: { start: number; end: number }[]
   /** Look of the recorded video. */
   effects?: Partial<Effects>
+  /** Shuttle positions found in the video (normalised image coords). */
+  shuttle?: { t: number; x: number; y: number }[]
 }
 
 export interface Shot {
@@ -138,10 +140,25 @@ export interface Rally {
   shots: Shot[]
   server: Side
   winner: Side
-  winnerSource: "manual" | "next-serve" | "last-hitter"
+  winnerSource: "manual" | "landing" | "next-serve" | "last-hitter"
+  /** Where the shuttle came down after the last shot, if it was seen. */
+  landing: Landing | null
   serverSource: "manual" | "sound" | "score"
   durationS: number
   scoreAfter: Record<Side, number>
+}
+
+export interface Landing {
+  /** Court position (metres). */
+  x: number
+  y: number
+  /** Inside the lines for this format (singles / doubles). */
+  in: boolean
+  /** Within 15 cm of a line: worth a look. */
+  close: boolean
+  nearNet: boolean
+  /** Video time the shuttle came down. */
+  t: number
 }
 
 export interface PlayerStats {

@@ -261,7 +261,7 @@ export function RallyList({
       </p>
       {!!session.offCamera?.length && result.rallies.length > 0 && (
         <p className="mb-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-          This looks like TV footage (it has camera cuts), so who won each rally can't be worked out from the video. Tap the winner of each rally to set the score.
+          This looks like TV footage (it has camera cuts), so who won a rally is only known when the shuttle is seen landing. Check the others and tap the winner to set the score.
         </p>
       )}
       {result.rallies.length === 0 && <p className="text-sm text-gray-500">No rallies found yet. Lower the sensitivity or add shots on the timeline.</p>}
@@ -275,6 +275,11 @@ export function RallyList({
               <span className="tabular-nums text-gray-500">{fmt(r.start)}</span>
               <span className="text-gray-300">{r.shots.length} shots · {r.durationS.toFixed(1)} s</span>
               <span className="text-xs text-gray-500">served by {r.server}{r.serverSource === "sound" ? " (from sound)" : r.serverSource === "manual" ? " (set by you)" : ""}</span>
+              {r.landing && (
+                <span className={`rounded px-1.5 py-0.5 text-xs ${r.landing.in ? "bg-green-500/15 text-green-300" : "bg-red-500/15 text-red-300"}`}>
+                  landed {r.landing.in ? "in" : "out"}{r.landing.close ? " (close)" : ""}{r.landing.nearNet ? " near the net" : ""}
+                </span>
+              )}
               <button
                 type="button"
                 onClick={() => onToggleWinner(r)}
@@ -282,7 +287,7 @@ export function RallyList({
                 title="Change who won this rally"
               >
                 <span className="h-2 w-2 rounded-full" style={{ background: SIDE_COLORS[r.winner] }} />
-                {sideName(session, r.winner)} won{r.winnerSource === "manual" ? " ✓" : ""}
+                {sideName(session, r.winner)} won{r.winnerSource === "manual" ? " ✓" : r.winnerSource === "landing" ? " (shuttle seen landing)" : ""}
               </button>
               <span className="w-12 text-right font-semibold tabular-nums text-white">{r.scoreAfter.near}–{r.scoreAfter.far}</span>
             </div>

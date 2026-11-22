@@ -300,7 +300,7 @@ export function smoothTrack(frames: TrackFrame[], maxGapS = 0.8): TrackFrame[] {
   return out
 }
 
-function seekTo(video: HTMLVideoElement, t: number): Promise<void> {
+export function seekTo(video: HTMLVideoElement, t: number): Promise<void> {
   return new Promise((resolve) => {
     const done = () => {
       video.removeEventListener("seeked", done)
@@ -325,7 +325,7 @@ type FrameCallbackVideo = HTMLVideoElement & {
  * do it (no frame callbacks, or playback did not start / stalled), so the
  * caller can fall back to seeking.
  */
-async function playFrames(
+export async function playFrames(
   video: HTMLVideoElement,
   start: number,
   end: number,

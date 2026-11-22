@@ -1,8 +1,9 @@
 import { onsetScore } from "./audio"
-import { depthFromNet, dist } from "./geometry"
+import { applyHomography, computeHomography, COURT_L, COURT_W, depthFromNet, dist, markPoints, NET_Y } from "./geometry"
 import {
   SHOT_TYPES,
   type AnalysisResult,
+  type Landing,
   type PlayerStats,
   type Pt,
   type Rally,
@@ -130,6 +131,40 @@ function pathStats(track: TrackFrame[], side: Side, slot: number) {
   return { distance, top, path }
 }
 
+/**
+ * Where the shuttle came down after a rally's last shot: the last point of a
+ * seen flight that ends within 2.5 s of the hit. The image point is taken as
+ * being on the floor, which it is at the moment of landing.
+ */
+export function findLanding(session: Session, lastShotT: number, nextShotT: number | null): Landing | null {
+  const pts = session.shuttle
+  if (!pts?.length) return null
+  const H = computeHomography(session.corners, markPoints(session.marks))
+  if (!H) return null
+  const until = Math.min(lastShotT + 2.5, nextShotT ?? Infinity)
+  const after = pts.filter((p) => p.t > lastShotT + 0.12 && p.t <= until)
+  if (after.length < 5) return null
+  const end = after[after.length - 1]
+  // The flight must end coming down (image y growing) and must not be cut off by the window.
+  const prev = after[Math.max(0, after.length - 4)]
+  if (end.y <= prev.y) return null
+  const c = applyHomography(H, { x: end.x, y: end.y })
+  if (!Number.isFinite(c.x) || c.x < -2 || c.x > COURT_W + 2 || c.y < -2 || c.y > COURT_L + 2) return null
+  const singles = session.settings.format === "singles"
+  const x0 = singles ? 0.46 : 0
+  const x1 = singles ? COURT_W - 0.46 : COURT_W
+  const inside = c.x >= x0 && c.x <= x1 && c.y >= 0 && c.y <= COURT_L
+  const edge = Math.min(Math.abs(c.x - x0), Math.abs(c.x - x1), Math.abs(c.y), Math.abs(c.y - COURT_L))
+  return {
+    x: Math.round(c.x * 100) / 100,
+    y: Math.round(c.y * 100) / 100,
+    in: inside,
+    close: edge < 0.15,
+    nearNet: Math.abs(c.y - NET_Y) < 1.5,
+    t: end.t,
+  }
+}
+
 export function buildResult(session: Session): AnalysisResult {
   const { settings, range, track, edits } = session
   const slots = settings.format === "doubles" ? 2 : 1
@@ -234,7 +269,12 @@ export function buildResult(session: Session): AnalysisResult {
     const nextEv = evidence[ri + 1]
     let winner: Side
     let winnerSource: Rally["winnerSource"]
+    const nextRaw = groups[ri + 1]?.[0]
+    const landing = findLanding(session, last.t, nextRaw ? nextRaw.t : null)
+    // Landed in on the receiver's side: the hitter wins; out: the receiver wins.
+    const landingWinner: Side | null = landing ? (landing.in ? last.side : other(last.side)) : null
     if (session.winners[id]) { winner = session.winners[id]; winnerSource = "manual" }
+    else if (landingWinner && !landing!.close) { winner = landingWinner; winnerSource = "landing" }
     else if (nextEv) { winner = nextEv.side; winnerSource = "next-serve" }
     else { winner = last.side; winnerSource = "last-hitter" }
     score[winner]++
@@ -250,6 +290,7 @@ export function buildResult(session: Session): AnalysisResult {
       serverSource,
       winner,
       winnerSource,
+      landing,
       scoreAfter: { ...score },
     })
     shots.push(...rallyShots)
