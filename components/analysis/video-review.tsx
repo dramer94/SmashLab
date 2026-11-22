@@ -1,10 +1,10 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { ChevronLeft, ChevronRight, Download, Pause, Play, Plus, Trash2 } from "lucide-react"
-import { buildOverlayModel, drawOverlay, SIDE_COLORS, type OverlayOptions } from "@/lib/analysis/overlay"
+import { ChevronLeft, ChevronRight, Download, Film, Pause, Play, Plus, Trash2 } from "lucide-react"
+import { buildOverlayModel, drawOverlay, REPLAY_AFTER, REPLAY_BEFORE, REPLAY_RATE, SIDE_COLORS, type OverlayOptions } from "@/lib/analysis/overlay"
 import { SHOT_LABELS } from "@/lib/analysis/engine"
-import { SHOT_TYPES, type AnalysisResult, type Session, type ShotEdit, type Side } from "@/lib/analysis/types"
+import { SHOT_TYPES, type AnalysisResult, type Session, type Shot, type ShotEdit, type Side } from "@/lib/analysis/types"
 
 function fmt(t: number) {
   const m = Math.floor(t / 60)
@@ -43,6 +43,9 @@ export function VideoReview({
   const [exportUrl, setExportUrl] = useState<{ url: string; ext: string } | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
   const exportStop = useRef<(() => void) | null>(null)
+  /** Shot being previewed in slow motion in the player, if any. */
+  const previewRef = useRef<Shot | null>(null)
+  const [previewing, setPreviewing] = useState(false)
 
   const model = useMemo(() => buildOverlayModel(session, result), [session, result])
   const { start, end } = session.range
@@ -58,7 +61,7 @@ export function VideoReview({
     if (!c) return
     const ctx = c.getContext("2d")!
     ctx.clearRect(0, 0, c.width, c.height)
-    drawOverlay(ctx, c.width, c.height, v ? v.currentTime : tRef.current, model, opts)
+    drawOverlay(ctx, c.width, c.height, v ? v.currentTime : tRef.current, model, opts, previewRef.current)
   }, [model, opts])
 
   // Redraw loop while playing; single redraw otherwise.
@@ -67,6 +70,13 @@ export function VideoReview({
     const loop = () => {
       const v = videoRef.current
       if (v) {
+        const pv = previewRef.current
+        if (pv && v.currentTime >= Math.min(end, pv.t + REPLAY_AFTER)) {
+          v.pause()
+          v.playbackRate = rate
+          previewRef.current = null
+          setPreviewing(false)
+        }
         if (v.currentTime >= end && !v.paused) { v.pause(); v.currentTime = end }
         tRef.current = v.currentTime
         setT(v.currentTime)
@@ -76,7 +86,7 @@ export function VideoReview({
     }
     loop()
     return () => cancelAnimationFrame(raf)
-  }, [playing, draw, end])
+  }, [playing, draw, end, rate])
 
   const seek = useCallback((time: number) => {
     const clamped = Math.max(start, Math.min(end, time))
@@ -89,14 +99,34 @@ export function VideoReview({
     if (seekRequest) seek(seekRequest.t)
   }, [seekRequest, seek])
 
+  const previewReplay = useCallback((shot: Shot) => {
+    const v = videoRef.current
+    if (!v) return
+    v.pause()
+    previewRef.current = shot
+    setPreviewing(true)
+    const from = Math.max(start, shot.t - REPLAY_BEFORE)
+    v.addEventListener("seeked", () => {
+      v.playbackRate = REPLAY_RATE
+      v.play().catch(() => {})
+    }, { once: true })
+    v.currentTime = from
+    setT(from)
+  }, [start])
+
   const toggle = useCallback(() => {
     const v = videoRef.current
     if (!v) return
+    if (previewRef.current) {
+      previewRef.current = null
+      setPreviewing(false)
+      v.playbackRate = rate
+    }
     if (v.paused) {
       if (v.currentTime >= end - 0.05) v.currentTime = start
       v.play().catch(() => {})
     } else v.pause()
-  }, [start, end])
+  }, [start, end, rate])
 
   const shots = result.shots
   const selIdx = shots.findIndex((s) => s.id === selectedId)
@@ -151,14 +181,35 @@ export function VideoReview({
     const rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 6_000_000 } : undefined)
     const chunks: Blob[] = []
     rec.ondataavailable = (e) => e.data.size && chunks.push(e.data)
+
+    // The recording plan: the clip in order, with slow-motion replays of the
+    // marked shots inserted just after each rally ends.
+    type Seg = { from: number; to: number; rate: number; replay: Shot | null }
+    const plan: Seg[] = []
+    let cursor = start
+    for (const r of result.rallies) {
+      const reps = r.shots.filter((x) => x.replay)
+      const at = Math.min(end, r.end + 0.8)
+      if (!reps.length || at <= cursor) continue
+      plan.push({ from: cursor, to: at, rate: 1, replay: null })
+      for (const x of reps) {
+        plan.push({ from: Math.max(start, x.t - REPLAY_BEFORE), to: Math.min(end, x.t + REPLAY_AFTER), rate: REPLAY_RATE, replay: x })
+      }
+      cursor = at
+    }
+    if (cursor < end) plan.push({ from: cursor, to: end, rate: 1, replay: null })
+    const totalS = plan.reduce((a, g) => a + (g.to - g.from) / g.rate, 0)
+    let doneS = 0
+
     let raf = 0
     let stopped = false
+    let wake: (() => void) | null = null
     const finish = () => {
       if (stopped) return
       stopped = true
       cancelAnimationFrame(raf)
       v.pause()
-      if (rec.state !== "inactive") rec.stop()
+      wake?.()
     }
     rec.onstop = () => {
       stream.getTracks().forEach((tr) => tr.stop())
@@ -169,19 +220,66 @@ export function VideoReview({
       exportStop.current = null
     }
     exportStop.current = finish
+    const seekTo = (time: number) =>
+      new Promise<void>((r) => {
+        v.addEventListener("seeked", () => r(), { once: true })
+        v.currentTime = time
+      })
+    const paint = (replay: Shot | null) => {
+      ctx.drawImage(v, 0, 0, cw, ch)
+      drawOverlay(ctx, cw, ch, v.currentTime, model, opts, replay)
+    }
+    const playSeg = (g: Seg) =>
+      new Promise<void>((resolve) => {
+        wake = resolve
+        v.playbackRate = g.rate
+        const frame = () => {
+          if (stopped) return resolve()
+          paint(g.replay)
+          setExporting(Math.min(1, (doneS + Math.max(0, v.currentTime - g.from) / g.rate) / (totalS || 1)))
+          if (v.currentTime >= g.to || v.ended) {
+            v.pause()
+            return resolve()
+          }
+          raf = requestAnimationFrame(frame)
+        }
+        v.play().then(() => { raf = requestAnimationFrame(frame) }).catch(() => { finish(); resolve() })
+      })
+
     v.pause()
-    v.currentTime = start
-    await new Promise((r) => v.addEventListener("seeked", r, { once: true }))
+    await seekTo(start)
+    paint(null)
     setExporting(0)
     rec.start(1000)
-    const frame = () => {
-      ctx.drawImage(v, 0, 0, cw, ch)
-      drawOverlay(ctx, cw, ch, v.currentTime, model, opts)
-      setExporting((v.currentTime - start) / span)
-      if (v.currentTime >= end || v.ended) return finish()
-      raf = requestAnimationFrame(frame)
+    for (const g of plan) {
+      if (stopped) break
+      if (Math.abs(v.currentTime - g.from) > 0.05) {
+        // Pause the recorder while jumping so the jump itself is not filmed.
+        if (rec.state === "recording") rec.pause()
+        await seekTo(g.from)
+        paint(g.replay)
+        if (rec.state === "paused") rec.resume()
+      }
+      await playSeg(g)
+      doneS += (g.to - g.from) / g.rate
     }
-    v.play().then(() => { raf = requestAnimationFrame(frame) }).catch(() => finish())
+    stopped = true
+    v.playbackRate = rate
+    if (rec.state !== "inactive") rec.stop()
+  }
+
+  const replayCount = result.shots.filter((x) => x.replay).length
+  const pickReplays = () => {
+    // The three fastest shots (one per rally), smashes first.
+    const best = new Map<number, Shot>()
+    for (const x of result.shots) {
+      if (x.speedKmh == null) continue
+      const cur = best.get(x.rallyIndex)
+      const score = (y: Shot) => (y.type === "smash" ? 1000 : 0) + (y.speedKmh ?? 0)
+      if (!cur || score(x) > score(cur)) best.set(x.rallyIndex, x)
+    }
+    const top = [...best.values()].sort((a, b) => (b.type === "smash" ? 1000 : 0) + (b.speedKmh ?? 0) - ((a.type === "smash" ? 1000 : 0) + (a.speedKmh ?? 0))).slice(0, 3)
+    top.forEach((x) => onEditShot(x.id, { replay: true }))
   }
 
   const editBtn = "rounded-md border border-white/10 px-2.5 py-1.5 text-sm text-gray-200 hover:bg-white/5"
@@ -294,7 +392,7 @@ export function VideoReview({
               height: s.id === selectedId ? 16 : 11,
               marginTop: s.id === selectedId ? -2 : 0,
               background: s.manual ? "transparent" : SIDE_COLORS[s.side],
-              border: `2px solid ${s.id === selectedId ? "#fff" : s.manual ? SIDE_COLORS[s.side] : "#111827"}`,
+              border: `2px solid ${s.id === selectedId ? "#fff" : s.replay ? "#ef4444" : s.manual ? SIDE_COLORS[s.side] : "#111827"}`,
             }}
           />
         ))}
@@ -311,6 +409,19 @@ export function VideoReview({
             <span className="text-gray-400">at {fmt(selected.t - start)}</span>
             {selected.speedKmh != null && <span className="text-gray-400">· ~{selected.speedKmh} km/h</span>}
             {selected.manual && <span className="rounded bg-white/10 px-1.5 text-xs text-gray-300">added by you</span>}
+            <button
+              type="button"
+              onClick={() => onEditShot(selected.id, { replay: !selected.replay })}
+              className={`${editBtn} inline-flex items-center gap-1 ${selected.replay ? "border-red-500/60 bg-red-500/15 text-white" : ""}`}
+              title="Show this shot again in slow motion in the recorded video"
+            >
+              <Film className="h-4 w-4" /> Slow-mo replay {selected.replay ? "on" : "off"}
+            </button>
+            {videoUrl && (
+              <button type="button" onClick={() => previewReplay(selected)} disabled={previewing} className={`${editBtn} disabled:opacity-50`}>
+                {previewing ? "Playing…" : "Preview"}
+              </button>
+            )}
             <button type="button" className={`${editBtn} ml-auto inline-flex items-center gap-1 text-red-300`} onClick={() => { onEditShot(selected.id, { deleted: true }); onSelect(null) }}>
               <Trash2 className="h-4 w-4" /> Not a shot
             </button>
@@ -355,6 +466,9 @@ export function VideoReview({
 
       {videoUrl && (
         <div className="flex flex-wrap items-center gap-3">
+          <button type="button" onClick={pickReplays} disabled={exporting != null} className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-3 py-1.5 text-sm text-gray-200 hover:bg-white/5 disabled:opacity-50" title="Mark the three fastest shots for slow-motion replays">
+            <Film className="h-4 w-4" /> {replayCount ? `${replayCount} replay${replayCount > 1 ? "s" : ""} marked · add best smashes` : "Add replays of the best smashes"}
+          </button>
           <button type="button" onClick={startExport} disabled={exporting != null} className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-3 py-1.5 text-sm text-gray-200 hover:bg-white/5 disabled:opacity-50">
             <Download className="h-4 w-4" /> Record video with overlay
           </button>
@@ -364,7 +478,9 @@ export function VideoReview({
             </a>
           )}
           {exportError && <span className="text-sm text-amber-300">{exportError}</span>}
-          <span className="text-xs text-gray-500">Plays the clip once in real time and records it with the overlay as it is shown above.</span>
+          <span className="text-xs text-gray-500">
+            Plays the clip once in real time and records it with the overlay as shown above{replayCount ? ", with slow-motion replays after the rallies they belong to" : ""}. Shots outlined in red on the timeline get a replay.
+          </span>
         </div>
       )}
     </div>

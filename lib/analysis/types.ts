@@ -3,6 +3,8 @@
 // sideline as seen from the camera, 6.1 = right), y runs along it (0 = far
 // baseline, 13.4 = near baseline). The net sits at y = 6.7.
 
+import type { CourtMarks } from "./geometry"
+
 export interface Pt {
   x: number
   y: number
@@ -54,6 +56,8 @@ export interface ShotEdit {
   /** Pins this shot's hitting side; later shots in the rally alternate from it. */
   side?: Side
   deleted?: boolean
+  /** Show a slow-motion replay of this shot in the recorded video. */
+  replay?: boolean
 }
 
 export interface AnalysisSettings {
@@ -82,8 +86,10 @@ export interface Session {
   updatedAt: number
   video: VideoMeta
   range: { start: number; end: number }
-  /** Image corners, normalised 0..1: far-left, far-right, near-right, near-left. */
+  /** Marked image points, normalised 0..1: top-left, top-right, bottom-right, bottom-left. */
   corners: Pt[]
+  /** Which court lines the points sit on; missing = the four outer corners. */
+  marks?: CourtMarks
   settings: AnalysisSettings
   onsets: Onset[]
   track: TrackFrame[]
@@ -118,6 +124,7 @@ export interface Shot {
   speedKmh: number | null
   flightS: number | null
   level: number | null
+  replay: boolean
 }
 
 export interface Rally {

@@ -1,6 +1,12 @@
-import { applyHomography, computeHomography, COURT_CORNERS, COURT_L, COURT_W, courtLines, dist, type Homography } from "./geometry"
+import { applyHomography, computeHomography, COURT_L, COURT_W, courtLines, dist, markPoints, type Homography } from "./geometry"
 import { positionAt, SHOT_LABELS } from "./engine"
-import type { AnalysisResult, Pt, Session, Side } from "./types"
+import type { AnalysisResult, Pt, Session, Shot, Side } from "./types"
+
+/** Playback speed of slow-motion replays. */
+export const REPLAY_RATE = 0.35
+/** Seconds of play shown before / after the replayed shot. */
+export const REPLAY_BEFORE = 1.2
+export const REPLAY_AFTER = 0.8
 
 export const SIDE_COLORS: Record<Side, string> = { near: "#3987e5", far: "#d95926" }
 
@@ -19,7 +25,7 @@ export interface OverlayModel {
 }
 
 export function buildOverlayModel(session: Session, result: AnalysisResult): OverlayModel {
-  const courtToImage = computeHomography(COURT_CORNERS, session.corners)
+  const courtToImage = computeHomography(markPoints(session.marks), session.corners)
   const cumulative: Record<string, number[]> = {}
   const slots = session.settings.format === "doubles" ? 2 : 1
   for (const side of ["near", "far"] as Side[]) {
@@ -77,7 +83,8 @@ export function drawOverlay(
   H: number,
   t: number,
   model: OverlayModel,
-  opts: OverlayOptions
+  opts: OverlayOptions,
+  replay: Shot | null = null
 ) {
   const { session, result, courtToImage } = model
   const toImg = (p: Pt) => {
@@ -171,7 +178,13 @@ export function drawOverlay(
   // HUD: score + rally + last shot.
   const names = (side: Side) =>
     session.settings.players[side].map((p) => p.name).join(" / ") || side
-  const score = rally && t >= rally.end ? rally.scoreAfter : rally ? result.rallies[rally.index - 1]?.scoreAfter ?? { near: 0, far: 0 } : { near: 0, far: 0 }
+  const score = replay
+    ? result.rallies[replay.rallyIndex]?.scoreAfter ?? { near: 0, far: 0 } // TV-style: replays show the updated score
+    : rally && t >= rally.end
+      ? rally.scoreAfter
+      : rally
+        ? result.rallies[rally.index - 1]?.scoreAfter ?? { near: 0, far: 0 }
+        : { near: 0, far: 0 }
   const pad = 12 * u
   const rowH = 26 * u
   const hudW = 300 * u
@@ -242,6 +255,24 @@ export function drawOverlay(
       ctx.fill()
       ctx.stroke()
     }
+  }
+
+  if (replay) {
+    // Frame the picture and badge it, like a TV replay.
+    ctx.strokeStyle = "rgba(239,68,68,0.85)"
+    ctx.lineWidth = 6 * u
+    ctx.strokeRect(3 * u, 3 * u, W - 6 * u, H - 6 * u)
+    const label = `REPLAY · ${SHOT_LABELS[replay.type].toUpperCase()}${replay.speedKmh ? ` · ${replay.speedKmh} KM/H` : ""} · SLOW MOTION`
+    ctx.font = `800 ${16 * u}px system-ui, sans-serif`
+    ctx.textBaseline = "middle"
+    const tw = ctx.measureText(label).width
+    const bx = W / 2 - tw / 2 - 16 * u
+    const by = H - pad - 44 * u
+    ctx.fillStyle = "#dc2626"
+    roundRect(ctx, bx, by, tw + 32 * u, 34 * u, 17 * u)
+    ctx.fill()
+    ctx.fillStyle = "#ffffff"
+    ctx.fillText(label, bx + 16 * u, by + 17 * u)
   }
 
   ctx.font = `700 ${12 * u}px system-ui, sans-serif`

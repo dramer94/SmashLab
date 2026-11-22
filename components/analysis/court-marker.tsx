@@ -1,11 +1,17 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { applyHomography, computeHomography, COURT_CORNERS, courtLines, validateCorners } from "@/lib/analysis/geometry"
+import { applyHomography, computeHomography, courtLines, MARK_LINES, markPoints, validateCorners, type CourtMarks } from "@/lib/analysis/geometry"
 import type { Pt } from "@/lib/analysis/types"
 
 const MARGIN = 0.1
-const CORNER_NAMES = ["Far-left", "Far-right", "Near-right", "Near-left"]
+
+/** Names of the four points for the chosen lines, in marking order. */
+export function pointNames(marks: CourtMarks): string[] {
+  if (marks.top === "farBase" && marks.bottom === "nearBase") return ["Far-left corner", "Far-right corner", "Near-right corner", "Near-left corner"]
+  const short = (l: keyof typeof MARK_LINES) => MARK_LINES[l].label.replace(/ \(.*\)$/, "")
+  return [`${short(marks.top)}, left`, `${short(marks.top)}, right`, `${short(marks.bottom)}, right`, `${short(marks.bottom)}, left`]
+}
 
 export const DEFAULT_CORNERS: Pt[] = [
   { x: 0.33, y: 0.32 },
@@ -25,6 +31,7 @@ export function CourtMarker({
   corners,
   onChange,
   frameTime,
+  marks,
 }: {
   videoUrl: string
   width: number
@@ -32,7 +39,9 @@ export function CourtMarker({
   corners: Pt[]
   onChange: (c: Pt[]) => void
   frameTime: number
+  marks: CourtMarks
 }) {
+  const CORNER_NAMES = pointNames(marks)
   const videoRef = useRef<HTMLVideoElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const [drag, setDrag] = useState<number | null>(null)
@@ -58,7 +67,7 @@ export function CourtMarker({
   const problems = corners.length === 4 ? validateCorners(corners) : []
   const lines = useMemo(() => {
     if (corners.length !== 4 || validateCorners(corners).length) return []
-    const H = computeHomography(COURT_CORNERS, corners)
+    const H = computeHomography(markPoints(marks), corners)
     if (!H) return []
     return courtLines().map((l) => {
       const a = applyHomography(H, l.a)
@@ -66,7 +75,7 @@ export function CourtMarker({
       return { a: toPx(a), b: toPx(b), kind: l.kind }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [corners, width, height])
+  }, [corners, width, height, marks])
 
   const onKey = (e: React.KeyboardEvent) => {
     if (selected == null) return
@@ -208,8 +217,8 @@ export function CourtMarker({
       </div>
       <p className="text-xs text-gray-500">
         {corners.length < 4
-          ? `Tap the ${CORNER_NAMES[corners.length].toLowerCase()} corner of the outer court line.`
-          : "Drag each point onto the outer corner of the court lines on the floor. Select a point and use the arrow keys (Shift for bigger steps) to fine-tune. A corner cut off by the picture can sit in the dashed margin."}
+          ? `Tap point ${corners.length + 1}: ${CORNER_NAMES[corners.length].toLowerCase()}, where it meets the outer sideline.`
+          : "Drag each point onto the spot where the line meets the outer sideline on the floor. Select a point and use the arrow keys (Shift for bigger steps) to fine-tune. A point cut off by the picture can sit in the dashed margin."}
       </p>
       {problems.length > 0 && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">

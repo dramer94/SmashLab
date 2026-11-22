@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AlertTriangle, FileJson, FolderOpen, Loader2, RotateCcw, Trash2, Upload, Video } from "lucide-react"
-import { CourtMarker, DEFAULT_CORNERS } from "@/components/analysis/court-marker"
+import { CourtMarker, DEFAULT_CORNERS, pointNames } from "@/components/analysis/court-marker"
 import { VideoReview } from "@/components/analysis/video-review"
 import { CourtMap, PlayersTable, RallyList, ShotTypeChart, SummaryTiles } from "@/components/analysis/results-panels"
 import { decodeAudio, detectOnsets, MIN_CANDIDATE_RISE_DB, onsetScore } from "@/lib/analysis/audio"
 import { trackPlayers } from "@/lib/analysis/vision"
 import { buildResult, other } from "@/lib/analysis/engine"
-import { validateCorners } from "@/lib/analysis/geometry"
+import { DEFAULT_MARKS, MARK_LINES, validateCorners, type CourtMarks, type MarkLine } from "@/lib/analysis/geometry"
 import { deleteSession, isSession, listSaved, loadSession, saveSession, videoKey, type SavedEntry } from "@/lib/analysis/storage"
 import { SIDE_COLORS } from "@/lib/analysis/overlay"
 import type { AnalysisSettings, MatchFormat, Pt, Session, ShotEdit, Side, VideoMeta } from "@/lib/analysis/types"
@@ -20,6 +20,7 @@ type Step = "upload" | "mark" | "processing" | "results"
 
 interface Draft {
   corners: Pt[]
+  marks: CourtMarks
   range: { start: number; end: number }
   frameTime: number
   settings: AnalysisSettings
@@ -119,7 +120,7 @@ export function AnalysisApp() {
     }
     setSession(null)
     const end = Math.min(m.duration, MAX_CLIP_S)
-    setDraft({ corners: DEFAULT_CORNERS, range: { start: 0, end }, frameTime: Math.min(1, m.duration / 2), settings: defaultSettings() })
+    setDraft({ corners: DEFAULT_CORNERS, marks: DEFAULT_MARKS, range: { start: 0, end }, frameTime: Math.min(1, m.duration / 2), settings: defaultSettings() })
     setStep("mark")
   }
 
@@ -153,7 +154,8 @@ export function AnalysisApp() {
         (stage, frac) => setProgress({ stage, frac: stage.startsWith("Reading") ? 0.12 + frac * 0.13 : 0.25 + frac * 0.75 }),
         ac.signal,
         10,
-        draft.frameTime
+        draft.frameTime,
+        draft.marks
       )
       v.removeAttribute("src")
       v.load()
@@ -172,6 +174,7 @@ export function AnalysisApp() {
         video: meta,
         range: draft.range,
         corners: draft.corners,
+        marks: draft.marks,
         settings: draft.settings,
         onsets,
         track: tracked.track,
@@ -200,7 +203,7 @@ export function AnalysisApp() {
 
   const remark = () => {
     if (!session) return
-    setDraft({ corners: session.corners, range: session.range, frameTime: session.markTime ?? session.range.start + 0.5, settings: session.settings })
+    setDraft({ corners: session.corners, marks: session.marks ?? DEFAULT_MARKS, range: session.range, frameTime: session.markTime ?? session.range.start + 0.5, settings: session.settings })
     setStep("mark")
   }
 
@@ -315,7 +318,7 @@ export function AnalysisApp() {
               <h2 className="mb-3 font-semibold text-white">How it works</h2>
               <ol className="grid gap-3 text-sm text-gray-300 sm:grid-cols-2">
                 <li><span className="font-semibold text-white">1. Pick a video.</span> One or more rallies, filmed from a still phone.</li>
-                <li><span className="font-semibold text-white">2. Mark the court.</span> Drag four points onto the outer corners so player positions can be measured in metres.</li>
+                <li><span className="font-semibold text-white">2. Mark the court.</span> Drag four points onto the outer corners (or onto two court lines you can see) so player positions can be measured in metres.</li>
                 <li><span className="font-semibold text-white">3. Analyse.</span> Shots are found from the sound of each hit; players are found by comparing each frame with the empty court.</li>
                 <li><span className="font-semibold text-white">4. Check and fix.</span> Remove false shots, add missed ones, change shot types or rally winners. The stats update straight away.</li>
               </ol>
@@ -507,6 +510,7 @@ function MarkStep({
           width={meta.width}
           height={meta.height}
           corners={draft.corners}
+          marks={draft.marks}
           onChange={(corners) => setDraft({ ...draft, corners })}
           frameTime={draft.frameTime}
         />
@@ -526,10 +530,14 @@ function MarkStep({
       <div className="space-y-4">
         <div className="rounded-xl border border-white/10 bg-[var(--card)] p-5">
           <h2 className="mb-1 font-semibold text-white">Mark the court</h2>
-          <p className="text-sm text-gray-400">
-            Put the points on the <span className="text-white">outer corners of the doubles court</span>: 1 far-left, 2 far-right, 3 near-right, 4 near-left.
-            The yellow lines should sit on the white court lines. The more exact, the better the player positions.
+          <MarkModePicker marks={draft.marks} onChange={(marks) => setDraft({ ...draft, marks })} />
+          <p className="mt-3 text-sm text-gray-400">
+            {pointNames(draft.marks).map((n, i) => `${i + 1} ${n.toLowerCase()}`).join(", ")}. Each point goes where the line meets the{" "}
+            <span className="text-white">outer (doubles) sideline</span>. The yellow lines should sit on the white court lines. The more exact, the better the player positions.
           </p>
+          {MARK_LINES[draft.marks.bottom].y - MARK_LINES[draft.marks.top].y < 4 && (
+            <p className="mt-2 text-xs text-amber-300">These two lines are close together, so small marking errors grow across the court. Use lines further apart if you can see them.</p>
+          )}
         </div>
         <div className="space-y-4 rounded-xl border border-white/10 bg-[var(--card)] p-5">
           <div>
@@ -577,6 +585,64 @@ function MarkStep({
           <button type="button" className={`${btn} w-full justify-center`} onClick={onBack}>Back</button>
         </div>
       </div>
+    </div>
+  )
+}
+
+const LINE_ORDER = Object.keys(MARK_LINES) as MarkLine[]
+
+function MarkModePicker({ marks, onChange }: { marks: CourtMarks; onChange: (m: CourtMarks) => void }) {
+  const corners = marks.top === "farBase" && marks.bottom === "nearBase"
+  const [open, setOpen] = useState(!corners)
+  const ti = LINE_ORDER.indexOf(marks.top)
+  const bi = LINE_ORDER.indexOf(marks.bottom)
+  return (
+    <div className="mt-2 space-y-2">
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => { onChange(DEFAULT_MARKS); setOpen(false) }}
+          className={`flex-1 rounded-md border px-2.5 py-1.5 text-sm ${corners && !open ? "border-blue-500 bg-blue-500/15 text-white" : "border-white/10 text-gray-400"}`}
+        >
+          4 court corners
+        </button>
+        <button
+          type="button"
+          onClick={() => { setOpen(true); if (corners) onChange({ top: "net", bottom: "nearLong" }) }}
+          className={`flex-1 rounded-md border px-2.5 py-1.5 text-sm ${open ? "border-blue-500 bg-blue-500/15 text-white" : "border-white/10 text-gray-400"}`}
+        >
+          Two court lines
+        </button>
+      </div>
+      {open && (
+        <div className="grid grid-cols-1 gap-2 text-xs text-gray-400">
+          <label>
+            Farther line (points 1–2)
+            <select
+              value={marks.top}
+              onChange={(e) => onChange({ ...marks, top: e.target.value as MarkLine })}
+              className="mt-1 w-full rounded-md border border-white/10 bg-[var(--background)] px-2 py-1.5 text-sm text-white"
+            >
+              {LINE_ORDER.slice(0, -1).map((l, i) => (
+                <option key={l} value={l} disabled={i >= bi}>{MARK_LINES[l].label}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Nearer line (points 3–4)
+            <select
+              value={marks.bottom}
+              onChange={(e) => onChange({ ...marks, bottom: e.target.value as MarkLine })}
+              className="mt-1 w-full rounded-md border border-white/10 bg-[var(--background)] px-2 py-1.5 text-sm text-white"
+            >
+              {LINE_ORDER.slice(1).map((l, i) => (
+                <option key={l} value={l} disabled={i + 1 <= ti}>{MARK_LINES[l].label}</option>
+              ))}
+            </select>
+          </label>
+          <span>Use this when a corner is out of the picture, e.g. the near baseline is cut off.</span>
+        </div>
+      )}
     </div>
   )
 }

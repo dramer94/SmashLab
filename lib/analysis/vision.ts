@@ -1,4 +1,4 @@
-import { applyHomography, computeHomography, COURT_CORNERS, COURT_L, COURT_W, dist, NET_Y } from "./geometry"
+import { applyHomography, computeHomography, COURT_L, COURT_W, dist, markPoints, NET_Y, type CourtMarks } from "./geometry"
 import type { MatchFormat, Pt, Side, TrackFrame } from "./types"
 
 /**
@@ -402,10 +402,12 @@ export async function trackPlayers(
   onProgress: (stage: string, frac: number) => void,
   signal?: AbortSignal,
   fps = 10,
-  markTime?: number
+  markTime?: number,
+  marks?: CourtMarks
 ): Promise<TrackResult> {
-  const H = computeHomography(corners, COURT_CORNERS)
-  const toImage = computeHomography(COURT_CORNERS, corners)
+  const ref = markPoints(marks)
+  const H = computeHomography(corners, ref)
+  const toImage = computeHomography(ref, corners)
   if (!H || !toImage) throw new Error("Court marks do not form a valid court shape.")
   const w = Math.min(480, video.videoWidth || 480)
   const h = Math.round((w * (video.videoHeight || 270)) / (video.videoWidth || 480))

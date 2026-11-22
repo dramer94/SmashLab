@@ -15,6 +15,39 @@ export const COURT_CORNERS: Pt[] = [
   { x: 0, y: COURT_L },
 ]
 
+/**
+ * Lines the user can mark instead of the four corners (useful when a corner
+ * is out of the picture). Each is marked where it meets the two outer
+ * (doubles) sidelines. y is the distance from the far baseline in metres.
+ */
+export const MARK_LINES = {
+  farBase: { y: 0, label: "Far baseline" },
+  farLong: { y: LONG_SERVICE_DOUBLES, label: "Far long service line (doubles)" },
+  farShort: { y: NET_Y - SHORT_SERVICE, label: "Far short service line" },
+  net: { y: NET_Y, label: "Net (floor below the net, at the posts)" },
+  nearShort: { y: NET_Y + SHORT_SERVICE, label: "Near short service line" },
+  nearLong: { y: COURT_L - LONG_SERVICE_DOUBLES, label: "Near long service line (doubles)" },
+  nearBase: { y: COURT_L, label: "Near baseline" },
+} as const
+export type MarkLine = keyof typeof MARK_LINES
+export interface CourtMarks {
+  top: MarkLine
+  bottom: MarkLine
+}
+export const DEFAULT_MARKS: CourtMarks = { top: "farBase", bottom: "nearBase" }
+
+/** Court points (metres) for the four marked image points, in marking order. */
+export function markPoints(marks?: CourtMarks): Pt[] {
+  const t = MARK_LINES[marks?.top ?? "farBase"].y
+  const b = MARK_LINES[marks?.bottom ?? "nearBase"].y
+  return [
+    { x: 0, y: t },
+    { x: COURT_W, y: t },
+    { x: COURT_W, y: b },
+    { x: 0, y: b },
+  ]
+}
+
 export type Homography = number[]
 
 /** Solve the 3x3 homography (h33 = 1) that maps src[i] -> dst[i]. */

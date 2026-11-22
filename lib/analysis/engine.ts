@@ -206,6 +206,7 @@ export function buildResult(session: Session): AnalysisResult {
         speedKmh: null,
         flightS: null,
         level: r.level,
+        replay: !!edits[r.id]?.replay,
       })
     })
     rallyShots.forEach((s, i) => {
