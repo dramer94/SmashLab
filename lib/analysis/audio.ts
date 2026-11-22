@@ -17,6 +17,95 @@ export function onsetScore(o: Onset): number {
 }
 
 /**
+ * Rally rhythm rescue. Hits in a rally come every ~0.45–1.6 s. Where two
+ * confident hits are further apart than that, a weaker sound that splits the
+ * gap into rally-like intervals is very likely the missed hit (quiet far-side
+ * hits, echoey halls, people talking). The same is tried just before a rally's
+ * first hit and after its last, but only where it is quiet (never applause).
+ * Returns the onsets to add.
+ */
+export function rhythmRescue(all: Onset[], strong: Onset[], rallyGapS: number): Onset[] {
+  const MIN = 0.45
+  const MAX = 1.35
+  const chosen = new Set(strong)
+  const bg = (o: Onset) => o.level - (o.contrast ?? o.rise)
+  // Inside a rally (confident hits on both sides) even hits over loud talking count.
+  const weak = all.filter((o) => !chosen.has(o) && (o.contrast ?? o.rise) >= 2.5 && bg(o) <= 18)
+  const added: Onset[] = []
+  const fill = (a: number, b: number, depth: number) => {
+    if (b - a <= MAX || depth > 6) return
+    let best: Onset | null = null
+    for (const w of weak) {
+      if (w.t < a + MIN || w.t > b - MIN || added.includes(w)) continue
+      if (!best || (w.contrast ?? w.rise) > (best.contrast ?? best.rise)) best = w
+    }
+    if (!best) return
+    added.push(best)
+    fill(a, best.t, depth + 1)
+    fill(best.t, b, depth + 1)
+  }
+  /** Best chain of weak sounds from a to b where every step keeps rally tempo. */
+  const chain = (a: number, b: number): Onset[] | null => {
+    const pts = weak.filter((w) => w.t > a && w.t < b && !added.includes(w)).sort((x, y) => x.t - y.t)
+    const nodes = [{ t: a, c: 0 }, ...pts.map((w) => ({ t: w.t, c: w.contrast ?? w.rise })), { t: b, c: 0 }]
+    const best: number[] = nodes.map(() => -Infinity)
+    const prev: number[] = nodes.map(() => -1)
+    best[0] = 0
+    for (let j = 1; j < nodes.length; j++) {
+      for (let i = 0; i < j; i++) {
+        const d = nodes[j].t - nodes[i].t
+        if (d < MIN || d > 1.6 || best[i] === -Infinity) continue
+        if (best[i] + nodes[j].c > best[j]) { best[j] = best[i] + nodes[j].c; prev[j] = i }
+      }
+    }
+    if (best[nodes.length - 1] === -Infinity) return null
+    const out: Onset[] = []
+    for (let j = prev[nodes.length - 1]; j > 0; j = prev[j]) out.push(pts[j - 1])
+    return out
+  }
+  const sorted = [...strong].sort((x, y) => x.t - y.t)
+  for (let i = 1; i < sorted.length; i++) {
+    const a = sorted[i - 1].t
+    const b = sorted[i].t
+    if (b - a <= rallyGapS) fill(a, b, 0)
+    else if (b - a <= rallyGapS * 3) {
+      // A long gap is only one rally if sounds in tempo bridge it all the way.
+      const c = chain(a, b)
+      if (c) added.push(...c)
+    }
+  }
+  // Ends of rallies: only clear, quiet-background sounds in rhythm.
+  const edgeOk = (w: Onset) => (w.contrast ?? w.rise) >= 4 && bg(w) <= 11 && !added.includes(w)
+  // Extend from the real first/last hit of each rally (rescued ones included).
+  const all2 = [...sorted, ...added].sort((x, y) => x.t - y.t)
+  const firsts: number[] = []
+  const lasts: number[] = []
+  all2.forEach((o, i) => {
+    if (i === 0 || o.t - all2[i - 1].t > rallyGapS) firsts.push(o.t)
+    if (i === all2.length - 1 || all2[i + 1].t - o.t > rallyGapS) lasts.push(o.t)
+  })
+  for (const first of firsts) {
+    let t = first
+    for (let k = 0; k < 3; k++) {
+      const w = weak.filter((x) => edgeOk(x) && x.t >= t - 1.6 && x.t <= t - MIN).sort((x, y) => y.t - x.t)[0]
+      if (!w) break
+      added.push(w)
+      t = w.t
+    }
+  }
+  for (const last of lasts) {
+    let t = last
+    for (let k = 0; k < 3; k++) {
+      const w = weak.filter((x) => edgeOk(x) && x.t >= t + MIN && x.t <= t + 1.6).sort((x, y) => x.t - y.t)[0]
+      if (!w) break
+      added.push(w)
+      t = w.t
+    }
+  }
+  return added
+}
+
+/**
  * Background (median of the surrounding 1.2 s, relative to the clip's typical
  * level) above which a sound is treated as crowd noise. Measured: applause and
  * cheering sat at 11–18 dB, real hits at most 7.7 dB (amateur and broadcast).

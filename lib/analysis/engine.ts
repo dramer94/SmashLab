@@ -1,4 +1,4 @@
-import { onsetScore } from "./audio"
+import { onsetScore, rhythmRescue } from "./audio"
 import { applyHomography, computeHomography, COURT_L, COURT_W, depthFromNet, dist, markPoints, NET_Y } from "./geometry"
 import {
   SHOT_TYPES,
@@ -170,11 +170,13 @@ export function buildResult(session: Session): AnalysisResult {
   const slots = settings.format === "doubles" ? 2 : 1
 
   type Raw = { id: string; t: number; manual: boolean; level: number | null }
+  const usable = session.onsets.filter(
+    (o) => o.t >= range.start && o.t <= range.end && !session.offCamera?.some((c) => o.t >= c.start && o.t <= c.end)
+  )
+  const strong = usable.filter((o) => onsetScore(o) >= settings.sensitivityDb)
+  const heard = [...strong, ...rhythmRescue(usable, strong, settings.rallyGapS)]
   const raws: Raw[] = [
-    ...session.onsets
-      .filter((o) => onsetScore(o) >= settings.sensitivityDb && o.t >= range.start && o.t <= range.end)
-      .filter((o) => !session.offCamera?.some((c) => o.t >= c.start && o.t <= c.end))
-      .map((o) => ({ id: `a${Math.round(o.t * 1000)}`, t: o.t, manual: false, level: o.level })),
+    ...heard.map((o) => ({ id: `a${Math.round(o.t * 1000)}`, t: o.t, manual: false, level: o.level })),
     ...session.manualShots.map((m) => ({ id: m.id, t: m.t, manual: true, level: null })),
   ]
     .filter((r) => !edits[r.id]?.deleted)
