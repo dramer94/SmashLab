@@ -259,6 +259,11 @@ export function RallyList({
       <p className="mb-3 text-xs text-gray-500">
         The winner of a rally serves the next one, so the score follows from who serves. When that is unclear the last hitter gets the point. Tap the winner to change it.
       </p>
+      {!!session.offCamera?.length && result.rallies.length > 0 && (
+        <p className="mb-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+          This looks like TV footage (it has camera cuts), so who won each rally can't be worked out from the video. Tap the winner of each rally to set the score.
+        </p>
+      )}
       {result.rallies.length === 0 && <p className="text-sm text-gray-500">No rallies found yet. Lower the sensitivity or add shots on the timeline.</p>}
       <div className="divide-y divide-white/5">
         {result.rallies.map((r) => (

@@ -313,6 +313,69 @@ function seekTo(video: HTMLVideoElement, t: number): Promise<void> {
   })
 }
 
+type FrameCallbackVideo = HTMLVideoElement & {
+  requestVideoFrameCallback?: (cb: (now: number, meta: { mediaTime: number }) => void) => number
+  cancelVideoFrameCallback?: (id: number) => void
+}
+
+/**
+ * Visits frames about every `step` seconds between start and end by playing
+ * the video (muted, sped up) and handling frames as they are presented. Much
+ * faster than seeking to every sample. Returns false if this browser cannot
+ * do it (no frame callbacks, or playback did not start / stalled), so the
+ * caller can fall back to seeking.
+ */
+async function playFrames(
+  video: HTMLVideoElement,
+  start: number,
+  end: number,
+  step: number,
+  visit: (t: number) => void,
+  signal?: AbortSignal,
+  rate = 3
+): Promise<boolean> {
+  const v = video as FrameCallbackVideo
+  if (!v.requestVideoFrameCallback) return false
+  await seekTo(video, start)
+  video.muted = true
+  video.playbackRate = rate
+  let next = start
+  let lastFrameAt = performance.now()
+  let id = 0
+  let ok = true
+  await new Promise<void>((resolve) => {
+    let finished = false
+    const finish = (good: boolean) => {
+      if (finished) return
+      finished = true
+      ok = good
+      clearInterval(watchdog)
+      if (id) v.cancelVideoFrameCallback?.(id)
+      video.pause()
+      resolve()
+    }
+    const onFrame = (_now: number, meta: { mediaTime: number }) => {
+      lastFrameAt = performance.now()
+      if (signal?.aborted) return finish(true)
+      const t = meta.mediaTime
+      if (t >= next - step * 0.25) {
+        visit(t)
+        next = Math.max(next + step, t + step * 0.75)
+      }
+      if (t >= end || video.ended) return finish(true)
+      id = v.requestVideoFrameCallback!(onFrame)
+    }
+    const watchdog = setInterval(() => {
+      if (video.ended || video.currentTime >= end) finish(true)
+      else if (performance.now() - lastFrameAt > 3000) finish(false)
+    }, 500)
+    id = v.requestVideoFrameCallback!(onFrame)
+    video.play().catch(() => finish(false))
+  })
+  video.playbackRate = 1
+  return ok
+}
+
 export interface TrackResult {
   track: TrackFrame[]
   detection: Record<Side, number>
@@ -406,29 +469,41 @@ export async function trackPlayers(
   const offCamera: { start: number; end: number }[] = []
   let onFrames = 0
   const step = 1 / fps
-  const total = Math.max(1, Math.floor(span / step))
-  for (let i = 0; i <= total; i++) {
-    if (signal?.aborted) throw new DOMException("Aborted", "AbortError")
-    const t = Math.min(range.end, range.start + i * step)
-    await seekTo(video, t)
+  let done = range.start - step
+  let lastWasOff = false
+  const visit = (time: number) => {
+    const t = Math.round(time * 1000) / 1000
+    done = time
+    onProgress("Tracking players", (time - range.start) / (span || 1))
     if (!onCamera()) {
-      const last = offCamera[offCamera.length - 1]
-      if (last && t - last.end <= step * 1.5) last.end = Math.round(t * 1000) / 1000
-      else offCamera.push({ start: Math.round(Math.max(range.start, t - step / 2) * 1000) / 1000, end: Math.round(t * 1000) / 1000 })
-      raw.push({ t: Math.round(t * 1000) / 1000, near: Array(slots).fill(null), far: Array(slots).fill(null) })
-      if (i % 3 === 0) onProgress("Tracking players", i / total)
-      continue
+      // Consecutive off-camera samples extend the same stretch.
+      if (lastWasOff) offCamera[offCamera.length - 1].end = t
+      else offCamera.push({ start: Math.round(Math.max(range.start, t - step / 2) * 1000) / 1000, end: t })
+      lastWasOff = true
+      raw.push({ t, near: Array(slots).fill(null), far: Array(slots).fill(null) })
+      return
     }
+    lastWasOff = false
     onFrames++
     const { blobs, fgShare } = detectBlobs(grab(), bg, w, h, 4, expectedHeight)
     shares.push(fgShare)
     const cands = candidatesBySide(blobs, H)
-    const near = trackers.near.update(t, cands.near)
-    const far = trackers.far.update(t, cands.far)
+    const near = trackers.near.update(time, cands.near)
+    const far = trackers.far.update(time, cands.far)
     seen.near += near.filter(Boolean).length / slots
     seen.far += far.filter(Boolean).length / slots
-    raw.push({ t: Math.round(t * 1000) / 1000, near, far })
-    if (i % 3 === 0) onProgress("Tracking players", i / total)
+    raw.push({ t, near, far })
+  }
+  // Fast path: play the clip sped up and handle frames as they appear.
+  const played = await playFrames(video, range.start, range.end, step, visit, signal)
+  if (signal?.aborted) throw new DOMException("Aborted", "AbortError")
+  // Fallback (or finishing a stalled playback): seek frame by frame.
+  if (!played) {
+    for (let t = done + step; t <= range.end + 1e-6; t += step) {
+      if (signal?.aborted) throw new DOMException("Aborted", "AbortError")
+      await seekTo(video, t)
+      visit(t)
+    }
   }
 
   for (const o of offCamera) o.end = Math.min(range.end, Math.round((o.end + step / 2) * 1000) / 1000)

@@ -161,7 +161,10 @@ export function buildResult(session: Session): AnalysisResult {
     const pinned = edits[g[0].id]?.side
     if (pinned) return { side: pinned, source: "manual" as const }
     const lv = g.map((r) => r.level)
-    if (g.length >= 3 && lv.every((l) => l != null)) {
+    // TV footage (it has camera cuts) is mixed from microphones around the
+    // court, so near hits are not reliably louder. Tested: wrong on broadcast.
+    const tv = !!session.offCamera?.length
+    if (!tv && g.length >= 3 && lv.every((l) => l != null)) {
       let even = 0, odd = 0, ne = 0, no = 0
       lv.forEach((l, i) => (i % 2 === 0 ? ((even += l!), ne++) : ((odd += l!), no++)))
       const diff = even / ne - odd / no
