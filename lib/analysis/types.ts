@@ -108,6 +108,12 @@ export interface Session {
   offCamera?: { start: number; end: number }[]
   /** Look of the recorded video. */
   effects?: Partial<Effects>
+  /** Which player the user said they are (for saving to their profile). */
+  me?: { side: Side; slot: number }
+  /** When the stats were last saved to the profile. */
+  savedAt?: number
+  /** Public results page id, once shared. */
+  shareId?: string
   /** Shuttle positions found in the video (normalised image coords). */
   shuttle?: { t: number; x: number; y: number }[]
 }

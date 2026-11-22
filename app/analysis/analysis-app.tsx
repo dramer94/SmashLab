@@ -1,10 +1,12 @@
 "use client"
 
+import Link from "next/link"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AlertTriangle, FileJson, FolderOpen, Loader2, RotateCcw, Trash2, Upload, Video } from "lucide-react"
 import { CourtMarker, DEFAULT_CORNERS, pointNames } from "@/components/analysis/court-marker"
 import { VideoReview } from "@/components/analysis/video-review"
 import { EffectsPanel } from "@/components/analysis/effects-panel"
+import { SaveShareCard } from "@/components/analysis/save-share"
 import { loadBrand, saveBrand, withDefaults, type Brand } from "@/lib/analysis/effects"
 import { CourtMap, PlayersTable, RallyList, ShotTypeChart, SummaryTiles } from "@/components/analysis/results-panels"
 import { decodeAudio, detectOnsets, MIN_CANDIDATE_RISE_DB, onsetScore } from "@/lib/analysis/audio"
@@ -316,7 +318,8 @@ export function AnalysisApp() {
           <h1 className="text-3xl font-bold text-white">Rally Analysis</h1>
           <p className="mt-1 max-w-2xl text-gray-400">
             Analyse a video of your own game: shots, shot types, rally score, shuttle speed, footwork distance and where you played on court.
-            Everything runs in your browser and the video stays on your device.
+            Everything runs in your browser and the video stays on your device.{" "}
+            <Link href="/analysis/leaderboard" className="text-blue-400 hover:text-blue-300">See this week&apos;s leaderboard</Link>.
           </p>
         </div>
         <Steps step={step} />
@@ -471,7 +474,10 @@ export function AnalysisApp() {
                 />
               </div>
             </div>
-            <SettingsPanel session={session} update={update} />
+            <div className="space-y-6">
+              <SettingsPanel session={session} update={update} />
+              <SaveShareCard session={session} result={result} update={update} />
+            </div>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3">

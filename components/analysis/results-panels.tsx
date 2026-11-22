@@ -241,12 +241,14 @@ export function RallyList({
   onRally,
   onToggleWinner,
   onShot,
+  readOnly = false,
 }: {
   result: AnalysisResult
   session: Session
   onRally: (r: Rally) => void
   onToggleWinner: (r: Rally) => void
   onShot: (id: string) => void
+  readOnly?: boolean
 }) {
   const [open, setOpen] = useState<number | null>(null)
   const fmt = (t: number) => {
@@ -257,9 +259,9 @@ export function RallyList({
     <div className={card}>
       <h3 className="mb-1 font-semibold text-white">Rallies & score</h3>
       <p className="mb-3 text-xs text-gray-500">
-        The winner of a rally serves the next one, so the score follows from who serves. When that is unclear the last hitter gets the point. Tap the winner to change it.
+        The winner of a rally serves the next one, so the score follows from who serves. When that is unclear the last hitter gets the point.{readOnly ? "" : " Tap the winner to change it."}
       </p>
-      {!!session.offCamera?.length && result.rallies.length > 0 && (
+      {!readOnly && !!session.offCamera?.length && result.rallies.length > 0 && (
         <p className="mb-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
           This looks like TV footage (it has camera cuts), so who won a rally is only known when the shuttle is seen landing. Check the others and tap the winner to set the score.
         </p>
@@ -282,6 +284,7 @@ export function RallyList({
               )}
               <button
                 type="button"
+                disabled={readOnly}
                 onClick={() => onToggleWinner(r)}
                 className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-white/10 px-2 py-0.5 text-xs text-gray-200 hover:bg-white/5"
                 title="Change who won this rally"

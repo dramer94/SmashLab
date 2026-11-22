@@ -235,3 +235,83 @@ model SlGenerationPlayer {
   @@index([playerId])
   @@map("sl_generation_player")
 }
+
+// ── Accounts & Rally Analysis results ────────────────────────────────────────
+// Only numbers and analysis data are stored: videos never leave the user's device.
+
+model SlUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  /// Show this player on public leaderboards.
+  isPublic     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  sessions  SlAuthSession[]
+  playStats SlPlayStat[]
+  shares    SlSharedAnalysis[]
+
+  @@map("sl_user")
+}
+
+model SlAuthSession {
+  /// SHA-256 of the cookie token; the token itself is never stored.
+  tokenHash String   @id
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user SlUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sl_auth_session")
+}
+
+/// One analysed video's stats for the player the user said they were.
+model SlPlayStat {
+  id          String   @id @default(cuid())
+  userId      String
+  /// The analysis id on the user's device (one saved stat per analysis).
+  analysisId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  videoName   String
+  format      String
+  side        String
+  slot        Int
+  playerName  String
+  durationS   Float
+  rallies     Int
+  pointsWon   Int
+  pointsLost  Int
+  shots       Int
+  smashes     Int
+  fastestKmh  Int?
+  avgSmashKmh Int?
+  distanceM   Float
+  calories    Float
+  topSpeedMs  Float
+  shotTypes   Json
+
+  user SlUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, analysisId])
+  @@index([createdAt])
+  @@map("sl_play_stat")
+}
+
+/// A read-only results page anyone with the link can open. No video.
+model SlSharedAnalysis {
+  id        String   @id
+  userId    String
+  title     String
+  data      Json
+  views     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  user SlUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sl_shared_analysis")
+}
