@@ -10,8 +10,18 @@ export const MIN_CANDIDATE_RISE_DB = 6
  * high. Older saved analyses have no contrast and fall back to the rise.
  */
 export function onsetScore(o: Onset): number {
-  return o.contrast ?? o.rise
+  if (o.contrast == null) return o.rise
+  // Sounds made over a loud crowd (applause, cheering) are not hits.
+  if (o.level - o.contrast > CROWD_BG_DB) return 0
+  return o.contrast
 }
+
+/**
+ * Background (median of the surrounding 1.2 s, relative to the clip's typical
+ * level) above which a sound is treated as crowd noise. Measured: applause and
+ * cheering sat at 11–18 dB, real hits at most 7.7 dB (amateur and broadcast).
+ */
+const CROWD_BG_DB = 9.5
 const HOP_S = 0.005
 const MIN_GAP_S = 0.22
 

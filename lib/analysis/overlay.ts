@@ -85,11 +85,12 @@ export function drawOverlay(
     return { x: q.x * W, y: q.y * H }
   }
   const u = Math.max(1, W / 960) // scale unit so the HUD looks the same at any size
+  const offCam = !!session.offCamera?.some((c) => t >= c.start && t <= c.end)
   ctx.save()
   ctx.lineCap = "round"
   ctx.lineJoin = "round"
 
-  if (courtToImage && opts.courtLines) {
+  if (courtToImage && opts.courtLines && !offCam) {
     ctx.strokeStyle = "rgba(250, 204, 21, 0.55)"
     for (const line of courtLines()) {
       ctx.lineWidth = (line.kind === "outer" ? 2 : 1.2) * u
@@ -116,7 +117,7 @@ export function drawOverlay(
   const slots = session.settings.format === "doubles" ? 2 : 1
   const ti = trackIndexAt(session.track, t)
   const players: { side: Side; slot: number; p: Pt }[] = []
-  if (courtToImage) {
+  if (courtToImage && !offCam) {
     for (const side of ["near", "far"] as Side[]) {
       for (let s = 0; s < slots; s++) {
         const p = positionAt(session.track, side, s, t)
@@ -154,7 +155,7 @@ export function drawOverlay(
   }
 
   // Flash at the hitter on each shot.
-  if (lastShot && lastShot.pos && courtToImage) {
+  if (lastShot && lastShot.pos && courtToImage && !offCam) {
     const age = t - lastShot.t
     if (age >= 0 && age < 0.45) {
       const c = toImg(lastShot.pos)

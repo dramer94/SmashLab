@@ -95,6 +95,10 @@ export interface Session {
   /** Rally winner overrides keyed by the rally's first shot id. */
   winners: Record<string, Side>
   hasAudio: boolean
+  /** Video time of the frame the court was marked on (the reference camera view). */
+  markTime?: number
+  /** Stretches filmed by another camera (close-ups, replays): skipped. */
+  offCamera?: { start: number; end: number }[]
 }
 
 export interface Shot {

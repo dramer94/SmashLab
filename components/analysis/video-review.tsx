@@ -267,6 +267,18 @@ export function VideoReview({
             title={`Rally ${r.index + 1}`}
           />
         ))}
+        {(session.offCamera ?? []).map((c) => (
+          <div
+            key={c.start}
+            className="absolute top-0 bottom-0"
+            style={{
+              left: `${((c.start - start) / span) * 100}%`,
+              width: `${((c.end - c.start) / span) * 100}%`,
+              background: "repeating-linear-gradient(135deg, rgba(255,255,255,0.08) 0 3px, transparent 3px 7px)",
+            }}
+            title="Other camera angle (skipped)"
+          />
+        ))}
         {shots.map((s) => (
           <button
             key={s.id}
@@ -337,6 +349,7 @@ export function VideoReview({
       ) : (
         <p className="text-xs text-gray-500">
           Tap a dot on the timeline to check a shot. Dots on top are far-side hits, dots below are near-side hits; hollow dots are shots you added.
+          {session.offCamera?.length ? " Striped parts were filmed by another camera and are skipped." : ""}
         </p>
       )}
 

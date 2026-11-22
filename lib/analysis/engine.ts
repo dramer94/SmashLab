@@ -138,6 +138,7 @@ export function buildResult(session: Session): AnalysisResult {
   const raws: Raw[] = [
     ...session.onsets
       .filter((o) => onsetScore(o) >= settings.sensitivityDb && o.t >= range.start && o.t <= range.end)
+      .filter((o) => !session.offCamera?.some((c) => o.t >= c.start && o.t <= c.end))
       .map((o) => ({ id: `a${Math.round(o.t * 1000)}`, t: o.t, manual: false, level: o.level })),
     ...session.manualShots.map((m) => ({ id: m.id, t: m.t, manual: true, level: null })),
   ]
@@ -146,9 +147,12 @@ export function buildResult(session: Session): AnalysisResult {
 
   // Split into rallies wherever the shuttle goes quiet for long enough.
   const groups: Raw[][] = []
+  const cutBetween = (a: number, b: number) => !!session.offCamera?.some((c) => c.start > a && c.start < b)
   for (const r of raws) {
     const g = groups[groups.length - 1]
-    if (g && r.t - g[g.length - 1].t <= settings.rallyGapS) g.push(r)
+    const prev = g?.[g.length - 1]
+    // A cut to another camera (close-up, replay) always ends the rally.
+    if (prev && r.t - prev.t <= settings.rallyGapS && !cutBetween(prev.t, r.t)) g.push(r)
     else groups.push([r])
   }
 

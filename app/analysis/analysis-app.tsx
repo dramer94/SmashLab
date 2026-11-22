@@ -38,7 +38,7 @@ function defaultPlayers(format: MatchFormat): AnalysisSettings["players"] {
 }
 
 function defaultSettings(format: MatchFormat = "singles"): AnalysisSettings {
-  return { format, sensitivityDb: 16, rallyGapS: 3.5, firstServer: "near", players: defaultPlayers(format) }
+  return { format, sensitivityDb: 10.5, rallyGapS: 3.5, firstServer: "near", players: defaultPlayers(format) }
 }
 
 function readMeta(url: string, file: File): Promise<VideoMeta> {
@@ -151,7 +151,9 @@ export function AnalysisApp() {
         draft.range,
         draft.settings.format,
         (stage, frac) => setProgress({ stage, frac: stage.startsWith("Reading") ? 0.12 + frac * 0.13 : 0.25 + frac * 0.75 }),
-        ac.signal
+        ac.signal,
+        10,
+        draft.frameTime
       )
       v.removeAttribute("src")
       v.load()
@@ -179,6 +181,8 @@ export function AnalysisApp() {
         edits: prev?.edits ?? {},
         winners: prev?.winners ?? {},
         hasAudio: !!audio,
+        markTime: draft.frameTime,
+        offCamera: tracked.offCamera,
       }
       setSession(s)
       setSelectedId(null)
@@ -196,7 +200,7 @@ export function AnalysisApp() {
 
   const remark = () => {
     if (!session) return
-    setDraft({ corners: session.corners, range: session.range, frameTime: session.range.start + 0.5, settings: session.settings })
+    setDraft({ corners: session.corners, range: session.range, frameTime: session.markTime ?? session.range.start + 0.5, settings: session.settings })
     setStep("mark")
   }
 
@@ -507,7 +511,7 @@ function MarkStep({
           frameTime={draft.frameTime}
         />
         <label className="block text-sm text-gray-400">
-          Frame to mark on (pick one where the court lines are easy to see)
+          Frame to mark on (pick one where the court lines are easy to see; for TV footage, a frame from the main camera)
           <input
             type="range"
             min={0}
@@ -618,7 +622,10 @@ function PlayerInputs({ settings, onChange }: { settings: AnalysisSettings; onCh
 function SettingsPanel({ session, update }: { session: Session; update: (fn: (s: Session) => Session) => void }) {
   const s = session.settings
   const set = (patch: Partial<AnalysisSettings>) => update((x) => ({ ...x, settings: { ...x.settings, ...patch } }))
-  const countAt = (db: number) => session.onsets.filter((o) => onsetScore(o) >= db && o.t >= session.range.start && o.t <= session.range.end).length
+  const countAt = (db: number) =>
+    session.onsets.filter(
+      (o) => onsetScore(o) >= db && o.t >= session.range.start && o.t <= session.range.end && !session.offCamera?.some((c) => o.t >= c.start && o.t <= c.end)
+    ).length
   const removed = Object.values(session.edits).filter((e) => e.deleted).length
   return (
     <div className="space-y-5 rounded-xl border border-white/10 bg-[var(--card)] p-5">

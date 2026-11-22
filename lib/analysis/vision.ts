@@ -37,12 +37,19 @@ export function medianBackground(frames: Uint8ClampedArray[], len: number): Uint
 }
 
 /** Finds person-sized foreground blobs. Returns blobs plus the foreground share. */
+/**
+ * Expected standing height (in grid cells) of a person whose feet are at the
+ * given normalised image point, or null when the court geometry is unknown.
+ */
+export type ExpectedHeight = (foot: Pt) => number | null
+
 export function detectBlobs(
   frame: Uint8ClampedArray,
   bg: Uint8ClampedArray,
   w: number,
   h: number,
-  minAreaCells = 4
+  minAreaCells = 4,
+  expectedHeight?: ExpectedHeight
 ): { blobs: Blob[]; fgShare: number } {
   const gw = Math.floor(w / CELL)
   const gh = Math.floor(h / CELL)
@@ -104,7 +111,15 @@ export function detectBlobs(
     comps.push(comp)
   }
 
-  // Bodies often split (shirt vs shorts vs legs); join pieces stacked vertically.
+  const footOf = (c: { x0: number; x1: number; y1: number }): Pt => ({
+    x: (((c.x0 + c.x1 + 1) / 2) * CELL) / w,
+    y: ((c.y1 + 1) * CELL) / h,
+  })
+  const expected = (c: { x0: number; x1: number; y1: number }) => expectedHeight?.(footOf(c)) ?? null
+
+  // Bodies often split (shirt vs shorts vs legs); join pieces stacked vertically,
+  // but never into something taller than one person standing there (from behind
+  // the baseline, a near player's head often touches a far player's feet).
   let merged = true
   while (merged) {
     merged = false
@@ -114,7 +129,10 @@ export function detectBlobs(
         const overlap = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) + 1
         const minW = Math.min(a.x1 - a.x0, b.x1 - b.x0) + 1
         const gap = Math.max(a.y0, b.y0) - Math.min(a.y1, b.y1) - 1
-        if (overlap >= Math.max(1, minW * 0.4) && gap <= 2) {
+        const lower = a.y1 >= b.y1 ? a : b
+        const exp = expected(lower)
+        const tooTall = exp != null && Math.max(a.y1, b.y1) - Math.min(a.y0, b.y0) + 1 > exp * 1.3
+        if (overlap >= Math.max(1, minW * 0.4) && gap <= 2 && !tooTall) {
           a.cells.push(...b.cells)
           a.x0 = Math.min(a.x0, b.x0); a.x1 = Math.max(a.x1, b.x1)
           a.y0 = Math.min(a.y0, b.y0); a.y1 = Math.max(a.y1, b.y1)
@@ -126,8 +144,32 @@ export function detectBlobs(
     }
   }
 
+  // Split blobs much taller than one person: the lower person keeps the
+  // bottom, and whoever is above stands where the upper part ends.
+  if (expectedHeight) {
+    for (let i = 0; i < comps.length; i++) {
+      const c = comps[i]
+      const exp = expected(c)
+      if (exp == null || c.y1 - c.y0 + 1 <= exp * 1.45) continue
+      const cut = c.y1 + 1 - Math.round(exp * 1.15)
+      const lower = { cells: [] as number[], x0: gw, x1: 0, y0: gh, y1: 0 }
+      const upper = { cells: [] as number[], x0: gw, x1: 0, y0: gh, y1: 0 }
+      for (const cell of c.cells) {
+        const cy = (cell / gw) | 0
+        const cx = cell % gw
+        const part = cy >= cut ? lower : upper
+        part.cells.push(cell)
+        part.x0 = Math.min(part.x0, cx); part.x1 = Math.max(part.x1, cx)
+        part.y0 = Math.min(part.y0, cy); part.y1 = Math.max(part.y1, cy)
+      }
+      comps[i] = lower
+      if (upper.cells.length >= minAreaCells) comps.push(upper)
+    }
+  }
+
   const blobs: Blob[] = []
   for (const c of comps) {
+    if (!c.cells.length) continue
     if (c.cells.length < minAreaCells) continue
     // Foot: average x of the bottom two rows, bottom edge of the blob.
     let sx = 0, n = 0
@@ -275,6 +317,18 @@ export interface TrackResult {
   track: TrackFrame[]
   detection: Record<Side, number>
   warnings: string[]
+  offCamera: { start: number; end: number }[]
+}
+
+const THUMB_W = 64
+const THUMB_H = 36
+/** Mean colour difference (0–255) from the marked view above which a frame is another camera. */
+const CUT_DIFF = 15
+
+function thumbDiff(a: Uint8ClampedArray, b: Uint8ClampedArray) {
+  let d = 0
+  for (let i = 0; i < a.length; i++) if ((i & 3) !== 3) d += Math.abs(a[i] - b[i])
+  return d / ((a.length / 4) * 3)
 }
 
 export async function trackPlayers(
@@ -284,10 +338,12 @@ export async function trackPlayers(
   format: MatchFormat,
   onProgress: (stage: string, frac: number) => void,
   signal?: AbortSignal,
-  fps = 10
+  fps = 10,
+  markTime?: number
 ): Promise<TrackResult> {
   const H = computeHomography(corners, COURT_CORNERS)
-  if (!H) throw new Error("Court marks do not form a valid court shape.")
+  const toImage = computeHomography(COURT_CORNERS, corners)
+  if (!H || !toImage) throw new Error("Court marks do not form a valid court shape.")
   const w = Math.min(480, video.videoWidth || 480)
   const h = Math.round((w * (video.videoHeight || 270)) / (video.videoWidth || 480))
   const canvas = document.createElement("canvas")
@@ -299,16 +355,45 @@ export async function trackPlayers(
     return ctx.getImageData(0, 0, w, h).data
   }
   const len = w * h * 4
+  // Thumbnails tell the marked camera view apart from close-ups and replays.
+  const tcanvas = document.createElement("canvas")
+  tcanvas.width = THUMB_W
+  tcanvas.height = THUMB_H
+  const tctx = tcanvas.getContext("2d", { willReadFrequently: true })!
+  const thumb = () => {
+    tctx.drawImage(video, 0, 0, THUMB_W, THUMB_H)
+    return tctx.getImageData(0, 0, THUMB_W, THUMB_H).data
+  }
+  await seekTo(video, markTime ?? range.start + Math.min(1, (range.end - range.start) / 2))
+  const refThumb = new Uint8ClampedArray(thumb())
+  const onCamera = () => thumbDiff(thumb(), refThumb) <= CUT_DIFF
+  // A 1.75 m player, using the court's sideways scale at their feet. Cameras
+  // look down on the court, which shortens people a little, hence 0.9.
+  const expectedHeight: ExpectedHeight = (foot) => {
+    const p = applyHomography(H, foot)
+    if (!Number.isFinite(p.x) || !inPlayArea(p)) return null
+    const a = applyHomography(toImage, { x: p.x - 0.5, y: p.y })
+    const b = applyHomography(toImage, { x: p.x + 0.5, y: p.y })
+    const pxPerM = Math.hypot((b.x - a.x) * w, (b.y - a.y) * h)
+    return (1.75 * 0.9 * pxPerM) / CELL
+  }
   const span = range.end - range.start
 
   onProgress("Reading the empty court", 0)
   const bgFrames: Uint8ClampedArray[] = []
   const nBg = 31
-  for (let i = 0; i < nBg; i++) {
+  const tries = 93
+  for (let i = 0; i < tries && bgFrames.length < nBg; i++) {
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError")
-    await seekTo(video, range.start + (span * (i + 0.5)) / nBg)
+    // Spread the samples over the clip, coarse to fine, so early stops still cover it.
+    const k = (i * 37) % tries
+    await seekTo(video, range.start + (span * (k + 0.5)) / tries)
+    if (!onCamera()) continue
     bgFrames.push(new Uint8ClampedArray(grab()))
-    onProgress("Reading the empty court", (i + 1) / nBg)
+    onProgress("Reading the empty court", bgFrames.length / nBg)
+  }
+  if (bgFrames.length < 5) {
+    throw new Error("Most of this clip does not look like the frame you marked. Mark the court on a frame from the main camera, or pick a part of the video filmed from one spot.")
   }
   const bg = medianBackground(bgFrames, len)
   bgFrames.length = 0
@@ -318,13 +403,24 @@ export async function trackPlayers(
   const raw: TrackFrame[] = []
   const seen: Record<Side, number> = { near: 0, far: 0 }
   const shares: number[] = []
+  const offCamera: { start: number; end: number }[] = []
+  let onFrames = 0
   const step = 1 / fps
   const total = Math.max(1, Math.floor(span / step))
   for (let i = 0; i <= total; i++) {
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError")
     const t = Math.min(range.end, range.start + i * step)
     await seekTo(video, t)
-    const { blobs, fgShare } = detectBlobs(grab(), bg, w, h)
+    if (!onCamera()) {
+      const last = offCamera[offCamera.length - 1]
+      if (last && t - last.end <= step * 1.5) last.end = Math.round(t * 1000) / 1000
+      else offCamera.push({ start: Math.round(Math.max(range.start, t - step / 2) * 1000) / 1000, end: Math.round(t * 1000) / 1000 })
+      raw.push({ t: Math.round(t * 1000) / 1000, near: Array(slots).fill(null), far: Array(slots).fill(null) })
+      if (i % 3 === 0) onProgress("Tracking players", i / total)
+      continue
+    }
+    onFrames++
+    const { blobs, fgShare } = detectBlobs(grab(), bg, w, h, 4, expectedHeight)
     shares.push(fgShare)
     const cands = candidatesBySide(blobs, H)
     const near = trackers.near.update(t, cands.near)
@@ -335,9 +431,16 @@ export async function trackPlayers(
     if (i % 3 === 0) onProgress("Tracking players", i / total)
   }
 
-  const n = raw.length || 1
+  for (const o of offCamera) o.end = Math.min(range.end, Math.round((o.end + step / 2) * 1000) / 1000)
+  const n = onFrames || 1
   const detection = { near: seen.near / n, far: seen.far / n }
   const warnings: string[] = []
+  const offS = offCamera.reduce((a, o) => a + o.end - o.start, 0)
+  if (offS > 1) {
+    warnings.push(
+      `${Math.round(offS)} s of the clip came from other camera angles (close-ups or replays). Those parts were skipped, including their sounds.`
+    )
+  }
   shares.sort((a, b) => a - b)
   if ((shares[shares.length >> 1] ?? 0) > 0.12) {
     warnings.push(
@@ -351,5 +454,5 @@ export async function trackPlayers(
       )
     }
   }
-  return { track: smoothTrack(raw), detection, warnings }
+  return { track: smoothTrack(raw), detection, warnings, offCamera }
 }
