@@ -108,9 +108,8 @@ export function validateCorners(c: Pt[]): string[] {
   if (signs[0] < 0) {
     problems.push("Left and right look swapped. Far-left should be on the left of far-right.")
   }
-  const farY = (c[0].y + c[1].y) / 2
-  const nearY = (c[2].y + c[3].y) / 2
-  if (farY >= nearY) problems.push("The far baseline should be higher in the picture than the near baseline.")
+  // No "far line must be higher" rule: from beside the court (e.g. a phone at
+  // the net post) the two lines sit left and right of each other.
   const farW = dist(c[0], c[1])
   const nearW = dist(c[2], c[3])
   if (farW > nearW * 1.15) problems.push("The far baseline looks wider than the near one. Check the points sit on the court corners.")

@@ -162,8 +162,10 @@ export function detectBlobs(
         part.x0 = Math.min(part.x0, cx); part.x1 = Math.max(part.x1, cx)
         part.y0 = Math.min(part.y0, cy); part.y1 = Math.max(part.y1, cy)
       }
+      // Only a second person if the upper part is body-sized, not a raised arm and racket.
+      if (upper.cells.length < Math.max(minAreaCells, c.cells.length * 0.3)) continue
       comps[i] = lower
-      if (upper.cells.length >= minAreaCells) comps.push(upper)
+      comps.push(upper)
     }
   }
 
@@ -432,14 +434,18 @@ export async function trackPlayers(
   await seekTo(video, markTime ?? range.start + Math.min(1, (range.end - range.start) / 2))
   const refThumb = new Uint8ClampedArray(thumb())
   const onCamera = () => thumbDiff(thumb(), refThumb) <= CUT_DIFF
-  // A 1.75 m player, using the court's sideways scale at their feet. Cameras
-  // look down on the court, which shortens people a little, hence 0.9.
+  // A 1.75 m player, using the court's least squashed floor scale at their
+  // feet (across the court from behind a baseline, along it from the side).
+  // Cameras look down on the court, which shortens people a little, hence 0.9.
   const expectedHeight: ExpectedHeight = (foot) => {
     const p = applyHomography(H, foot)
     if (!Number.isFinite(p.x) || !inPlayArea(p)) return null
-    const a = applyHomography(toImage, { x: p.x - 0.5, y: p.y })
-    const b = applyHomography(toImage, { x: p.x + 0.5, y: p.y })
-    const pxPerM = Math.hypot((b.x - a.x) * w, (b.y - a.y) * h)
+    const scale = (dx: number, dy: number) => {
+      const a = applyHomography(toImage, { x: p.x - dx, y: p.y - dy })
+      const b = applyHomography(toImage, { x: p.x + dx, y: p.y + dy })
+      return Math.hypot((b.x - a.x) * w, (b.y - a.y) * h)
+    }
+    const pxPerM = Math.max(scale(0.5, 0), scale(0, 0.5))
     return (1.75 * 0.9 * pxPerM) / CELL
   }
   const span = range.end - range.start
