@@ -7,6 +7,7 @@ import { CourtMarker, DEFAULT_CORNERS, pointNames } from "@/components/analysis/
 import { VideoReview } from "@/components/analysis/video-review"
 import { EffectsPanel } from "@/components/analysis/effects-panel"
 import { SaveShareCard } from "@/components/analysis/save-share"
+import { CoachPanel } from "@/components/analysis/coach-panel"
 import { loadBrand, saveBrand, withDefaults, type Brand } from "@/lib/analysis/effects"
 import { CourtMap, PlayersTable, RallyList, ShotTypeChart, SummaryTiles } from "@/components/analysis/results-panels"
 import { decodeAudio, detectOnsets, MIN_CANDIDATE_RISE_DB, onsetScore } from "@/lib/analysis/audio"
@@ -487,6 +488,15 @@ export function AnalysisApp() {
             </div>
             <CourtMap result={result} session={session} onShot={goShot} />
           </div>
+
+          <CoachPanel
+            session={session}
+            result={result}
+            onSeek={(t) => {
+              setSeekRequest({ t, n: Date.now() })
+              document.getElementById("review")?.scrollIntoView({ behavior: "smooth", block: "start" })
+            }}
+          />
 
           <RallyList
             result={result}

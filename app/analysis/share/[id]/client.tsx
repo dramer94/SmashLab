@@ -2,6 +2,7 @@
 
 import { useMemo } from "react"
 import { CourtMap, PlayersTable, RallyList, ShotTypeChart, SummaryTiles } from "@/components/analysis/results-panels"
+import { CoachPanel } from "@/components/analysis/coach-panel"
 import { buildResult } from "@/lib/analysis/engine"
 import type { Session } from "@/lib/analysis/types"
 
@@ -18,6 +19,7 @@ export function SharedResults({ session }: { session: Session }) {
         </div>
         <CourtMap result={result} session={session} onShot={noop} />
       </div>
+      <CoachPanel session={session} result={result} />
       <RallyList result={result} session={session} onRally={noop} onToggleWinner={noop} onShot={noop} readOnly />
     </div>
   )
