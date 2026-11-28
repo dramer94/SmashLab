@@ -75,6 +75,19 @@ export function rhythmRescue(all: Onset[], strong: Onset[], rallyGapS: number): 
     }
   }
   // Ends of rallies: only clear, quiet-background sounds in rhythm.
+  // Fast exchanges (drives, net kills): two hits under 1.35 s apart can still hide
+  // one in between. Only a clean, quiet tock at least 0.3 s from both is taken.
+  {
+    const cur = [...sorted, ...added].sort((x, y) => x.t - y.t)
+    for (let i = 1; i < cur.length; i++) {
+      const a = cur[i - 1].t, b = cur[i].t
+      if (b - a <= 0.7 || b - a > MAX) continue
+      const w = weak
+        .filter((x) => !added.includes(x) && x.t >= a + 0.3 && x.t <= b - 0.3 && (x.contrast ?? x.rise) >= 4 && bg(x) <= 11)
+        .sort((x, y) => (y.contrast ?? y.rise) - (x.contrast ?? x.rise))[0]
+      if (w) added.push(w)
+    }
+  }
   const edgeOk = (w: Onset) => (w.contrast ?? w.rise) >= 4 && bg(w) <= 11 && !added.includes(w)
   // Extend from the real first/last hit of each rally (rescued ones included).
   const all2 = [...sorted, ...added].sort((x, y) => x.t - y.t)
