@@ -21,6 +21,16 @@ export interface Blob {
   x1: number
   y0: number
   y1: number
+  /** Mean shirt colour (upper body), for telling players apart. */
+  color: RGB | null
+}
+
+export type RGB = [number, number, number]
+
+const colorDist = (a: RGB, b: RGB) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])
+
+export function rgbHex(c: RGB) {
+  return "#" + c.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0")).join("")
 }
 
 export function medianBackground(frames: Uint8ClampedArray[], len: number): Uint8ClampedArray {
@@ -179,16 +189,33 @@ export function detectBlobs(
       const cy = (cell / gw) | 0
       if (cy >= c.y1 - 1) { sx += (cell % gw) + 0.5; n++ }
     }
+    // Shirt colour: foreground pixels in the upper body (20–50% down the
+    // blob, middle 60% of its width).
+    const hgt = c.y1 - c.y0 + 1
+    const wid = c.x1 - c.x0 + 1
+    const ty0 = (c.y0 + Math.floor(hgt * 0.2)) * CELL
+    const ty1 = (c.y0 + Math.ceil(hgt * 0.5)) * CELL
+    const tx0 = (c.x0 + Math.floor(wid * 0.2)) * CELL
+    const tx1 = (c.x0 + Math.ceil(wid * 0.8)) * CELL
+    let cr = 0, cg = 0, cb = 0, cn = 0
+    for (let y = ty0; y < Math.min(h, ty1); y += 2) {
+      for (let x = tx0; x < Math.min(w, tx1); x += 2) {
+        const i = (y * w + x) * 4
+        if (Math.abs(frame[i] - bg[i]) + Math.abs(frame[i + 1] - bg[i + 1]) + Math.abs(frame[i + 2] - bg[i + 2]) <= DIFF_T) continue
+        cr += frame[i]; cg += frame[i + 1]; cb += frame[i + 2]; cn++
+      }
+    }
     blobs.push({
       foot: { x: ((sx / n) * CELL) / w, y: ((c.y1 + 1) * CELL) / h },
       area: c.cells.length,
       x0: c.x0, x1: c.x1, y0: c.y0, y1: c.y1,
+      color: cn >= 4 ? [cr / cn, cg / cn, cb / cn] : null,
     })
   }
   return { blobs, fgShare: fgPixels / (w * h) }
 }
 
-interface Candidate { p: Pt; area: number }
+interface Candidate { p: Pt; area: number; color: RGB | null }
 
 function inPlayArea(p: Pt) {
   return p.x > -1.2 && p.x < COURT_W + 1.2 && p.y > -1.8 && p.y < COURT_L + 1.8
@@ -204,9 +231,12 @@ export function candidatesBySide(blobs: Blob[], H: number[]): Record<Side, Candi
     const list = out[side]
     const close = list.find((c) => dist(c.p, p) < 0.7)
     if (close) {
-      if (b.area > close.area) close.p = p
+      if (b.area > close.area) {
+        close.p = p
+        close.color = b.color ?? close.color
+      }
       close.area += b.area
-    } else list.push({ p, area: b.area })
+    } else list.push({ p, area: b.area, color: b.color })
   }
   out.near.sort((a, b) => b.area - a.area)
   out.far.sort((a, b) => b.area - a.area)
@@ -217,9 +247,14 @@ export function candidatesBySide(blobs: Blob[], H: number[]): Record<Side, Candi
 export class SideTracker {
   prev: (Pt | null)[]
   lastSeen: number[]
+  /** Running shirt colour per player: keeps partners apart when they cross. */
+  colors: (RGB | null)[]
+  /** Shirt colour of the blob given to each player in the latest frame. */
+  frameColors: (RGB | null)[] = []
   constructor(private slots: number) {
     this.prev = Array(slots).fill(null)
     this.lastSeen = Array(slots).fill(-Infinity)
+    this.colors = Array(slots).fill(null)
   }
 
   update(t: number, cands: Candidate[]): (Pt | null)[] {
@@ -245,6 +280,10 @@ export class SideTracker {
           if (d > gate(slot) && !stale) continue
           cst = stale ? 1.5 - 0.5 * (c.area / (maxArea + 1)) : d
         } else cst = 1.0 - Math.min(0.9, c.area / (maxArea + 1)) // prefer big blobs
+        // Shirt colour: ~35 RGB units of difference costs as much as 1 m (dark
+        // shirts of partners can differ by only 30-40 units).
+        const known = this.colors[slot]
+        if (this.slots > 1 && known && c.color) cst += colorDist(known, c.color) / 35
         used.add(k)
         cur[slot] = c
         assign(slot + 1, used, cur, cost + cst)
@@ -253,13 +292,94 @@ export class SideTracker {
       cur[slot] = null
     }
     assign(0, new Set(), Array(this.slots).fill(null), 0)
+    this.frameColors = best.map((c) => c?.color ?? null)
     return best.map((c, i) => {
       if (!c) return null
       this.prev[i] = c.p
       this.lastSeen[i] = t
+      if (c.color) {
+        const k = this.colors[i]
+        this.colors[i] = k ? [k[0] * 0.9 + c.color[0] * 0.1, k[1] * 0.9 + c.color[1] * 0.1, k[2] * 0.9 + c.color[2] * 0.1] : c.color
+      }
       return c.p
     })
   }
+}
+
+const median3 = (cs: RGB[]): RGB | null => {
+  if (!cs.length) return null
+  const m = (k: 0 | 1 | 2) => cs.map((c) => c[k]).sort((a, b) => a - b)[cs.length >> 1]
+  return [m(0), m(1), m(2)]
+}
+
+/**
+ * Doubles partners can swap labels when they cross. Learn each partner's
+ * shirt colour from moments when they are clearly apart (2-means), split the
+ * clip wherever they come close, and swap the labels back in any stretch that
+ * fits the colours better the other way round. Returns the two shirt colours.
+ */
+export function fixIdentities(raw: TrackFrame[], cols: Record<Side, (RGB | null)[]>[], side: Side): [RGB, RGB] | null {
+  const apart = (f: TrackFrame) => {
+    const a = f[side][0], b = f[side][1]
+    return a && b ? dist(a, b) >= 1.5 : false
+  }
+  // 1. Two shirt colours, from frames where both are seen and apart.
+  const obs: RGB[] = []
+  const firstA: RGB[] = [], firstB: RGB[] = []
+  raw.forEach((f, i) => {
+    if (!apart(f)) return
+    const c0 = cols[i]?.[side]?.[0], c1 = cols[i]?.[side]?.[1]
+    if (c0) obs.push(c0)
+    if (c1) obs.push(c1)
+    if (i < raw.length * 0.3) { if (c0) firstA.push(c0); if (c1) firstB.push(c1) }
+  })
+  let A = median3(firstA), B = median3(firstB)
+  if (!A || !B || obs.length < 20) return null
+  for (let it = 0; it < 10; it++) {
+    const ga: RGB[] = [], gb: RGB[] = []
+    for (const o of obs) (colorDist(o, A) <= colorDist(o, B) ? ga : gb).push(o)
+    const na = median3(ga), nb = median3(gb)
+    if (!na || !nb) break
+    A = na
+    B = nb
+  }
+  if (colorDist(A, B) < 12) return [A, B] // shirts too alike to tell apart
+  // 2. Stretches between close encounters (or long gaps).
+  const segs: [number, number][] = []
+  let start = -1
+  for (let i = 0; i < raw.length; i++) {
+    const ok = apart(raw[i])
+    if (ok && start < 0) start = i
+    if ((!ok || i === raw.length - 1) && start >= 0) {
+      segs.push([start, ok ? i : i - 1])
+      start = -1
+    }
+  }
+  // 3. Swap stretches that fit the colours better the other way round.
+  for (const [a, b] of segs) {
+    const c0: RGB[] = [], c1: RGB[] = []
+    for (let i = a; i <= b; i++) {
+      const x = cols[i]?.[side]?.[0], y = cols[i]?.[side]?.[1]
+      if (x) c0.push(x)
+      if (y) c1.push(y)
+    }
+    const m0 = median3(c0), m1 = median3(c1)
+    if (!m0 && !m1) continue
+    const keep = (m0 ? colorDist(m0, A) : 0) + (m1 ? colorDist(m1, B) : 0)
+    const swap = (m0 ? colorDist(m0, B) : 0) + (m1 ? colorDist(m1, A) : 0)
+    if (swap < keep * 0.8) {
+      // Swap from the close encounter before this stretch until the next one.
+      let from = a
+      while (from > 0 && !apart(raw[from - 1]) && raw[from - 1][side][0] && raw[from - 1][side][1]) from--
+      for (let i = from; i <= b; i++) {
+        const f = raw[i]
+        ;[f[side][0], f[side][1]] = [f[side][1], f[side][0]]
+        const cc = cols[i]?.[side]
+        if (cc && cc.length === 2) [cc[0], cc[1]] = [cc[1], cc[0]]
+      }
+    }
+  }
+  return [A, B]
 }
 
 /** Fill short gaps by interpolation and smooth with a 5-sample median. */
@@ -383,6 +503,8 @@ export interface TrackResult {
   detection: Record<Side, number>
   warnings: string[]
   offCamera: { start: number; end: number }[]
+  /** Shirt colour per player slot (hex), when seen. */
+  colors: Record<Side, (string | null)[]>
 }
 
 const THUMB_W = 64
@@ -475,6 +597,7 @@ export async function trackPlayers(
   const seen: Record<Side, number> = { near: 0, far: 0 }
   const shares: number[] = []
   const offCamera: { start: number; end: number }[] = []
+  const rawColors: Record<Side, (RGB | null)[]>[] = []
   let onFrames = 0
   const step = 1 / fps
   let done = range.start - step
@@ -489,6 +612,7 @@ export async function trackPlayers(
       else offCamera.push({ start: Math.round(Math.max(range.start, t - step / 2) * 1000) / 1000, end: t })
       lastWasOff = true
       raw.push({ t, near: Array(slots).fill(null), far: Array(slots).fill(null) })
+      rawColors.push({ near: [], far: [] })
       return
     }
     lastWasOff = false
@@ -498,6 +622,7 @@ export async function trackPlayers(
     const cands = candidatesBySide(blobs, H)
     const near = trackers.near.update(time, cands.near)
     const far = trackers.far.update(time, cands.far)
+    rawColors.push({ near: trackers.near.frameColors, far: trackers.far.frameColors })
     seen.near += near.filter(Boolean).length / slots
     seen.far += far.filter(Boolean).length / slots
     raw.push({ t, near, far })
@@ -537,5 +662,15 @@ export async function trackPlayers(
       )
     }
   }
-  return { track: smoothTrack(raw), detection, warnings, offCamera }
+  const colors: Record<Side, (string | null)[]> = {
+    near: trackers.near.colors.map((c) => (c ? rgbHex(c) : null)),
+    far: trackers.far.colors.map((c) => (c ? rgbHex(c) : null)),
+  }
+  if (slots === 2) {
+    for (const side of ["near", "far"] as Side[]) {
+      const fixed = fixIdentities(raw, rawColors, side)
+      if (fixed) colors[side] = fixed.map(rgbHex)
+    }
+  }
+  return { track: smoothTrack(raw), detection, warnings, offCamera, colors }
 }

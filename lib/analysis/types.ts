@@ -108,6 +108,8 @@ export interface Session {
   offCamera?: { start: number; end: number }[]
   /** Look of the recorded video. */
   effects?: Partial<Effects>
+  /** Shirt colour (hex) of each tracked player, to help name them. */
+  playerColors?: Record<Side, (string | null)[]>
   /** Which player the user said they are (for saving to their profile). */
   me?: { side: Side; slot: number }
   /** When the stats were last saved to the profile. */

@@ -217,6 +217,7 @@ export function AnalysisApp() {
         hasAudio: !!audio,
         markTime: draft.frameTime,
         offCamera: tracked.offCamera,
+        playerColors: tracked.colors,
         shuttle,
       }
       setSession(s)
@@ -703,17 +704,33 @@ function MarkModePicker({ marks, onChange }: { marks: CourtMarks; onChange: (m: 
   )
 }
 
-function PlayerInputs({ settings, onChange }: { settings: AnalysisSettings; onChange: (p: AnalysisSettings["players"]) => void }) {
+function PlayerInputs({
+  settings,
+  onChange,
+  colors,
+}: {
+  settings: AnalysisSettings
+  onChange: (p: AnalysisSettings["players"]) => void
+  colors?: Record<Side, (string | null)[]>
+}) {
   return (
     <div className="space-y-2">
       {(["far", "near"] as Side[]).map((side) => (
         <div key={side}>
           <div className="mb-1 flex items-center gap-1.5 text-xs text-gray-400">
             <span className="h-2 w-2 rounded-full" style={{ background: SIDE_COLORS[side] }} />
-            {side === "far" ? "Far side (top of the picture)" : "Near side (closest to the camera)"}
+            {side === "far" ? "Far side (beyond the line you marked with points 1–2)" : "Near side (beyond points 3–4)"}
           </div>
           {settings.players[side].map((p, i) => (
-            <div key={i} className="mb-1.5 grid grid-cols-[1fr_88px] gap-2">
+            <div key={i} className={`mb-1.5 grid gap-2 ${colors ? "grid-cols-[auto_1fr_88px]" : "grid-cols-[1fr_88px]"}`}>
+              {colors && (
+                <span
+                  className="mt-1.5 h-6 w-6 rounded-md border border-white/20"
+                  style={{ background: colors[side]?.[i] ?? "transparent" }}
+                  title={colors[side]?.[i] ? "Shirt colour seen in the video" : "Shirt colour not seen"}
+                  aria-label={colors[side]?.[i] ? `Shirt colour ${colors[side]?.[i]}` : "Shirt colour unknown"}
+                />
+              )}
               <input
                 value={p.name}
                 aria-label={`${side} player ${i + 1} name`}
@@ -752,7 +769,8 @@ function SettingsPanel({ session, update }: { session: Session; update: (fn: (s:
   return (
     <div className="space-y-5 rounded-xl border border-white/10 bg-[var(--card)] p-5">
       <h3 className="font-semibold text-white">Settings</h3>
-      <PlayerInputs settings={s} onChange={(players) => set({ players })} />
+      <PlayerInputs settings={s} onChange={(players) => set({ players })} colors={session.playerColors} />
+      {session.playerColors && <p className="-mt-3 text-xs text-gray-500">The square is each player&apos;s shirt colour as seen in the video, to help you name them.</p>}
       {session.hasAudio && (
         <label className="block">
           <div className="flex justify-between text-sm text-gray-400">
