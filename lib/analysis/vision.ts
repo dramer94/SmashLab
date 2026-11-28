@@ -521,7 +521,7 @@ export async function trackPlayers(
   const offS = offCamera.reduce((a, o) => a + o.end - o.start, 0)
   if (offS > 1) {
     warnings.push(
-      `${Math.round(offS)} s of the clip came from other camera angles (close-ups or replays). Those parts were skipped, including their sounds.`
+      `${Math.round(offS)} s of the clip did not match the marked view (another camera angle, a replay, or someone standing in front of the phone). Those parts were skipped, including their sounds.`
     )
   }
   shares.sort((a, b) => a - b)
