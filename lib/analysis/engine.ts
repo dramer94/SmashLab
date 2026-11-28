@@ -8,6 +8,7 @@ import {
   type Pt,
   type Rally,
   type Session,
+  type Onset,
   type Shot,
   type ShotType,
   type Side,
@@ -165,6 +166,56 @@ export function findLanding(session: Session, lastShotT: number, nextShotT: numb
   }
 }
 
+/** Fastest any tracked player moved around time t (m/s), or null with no tracking there. */
+export function activityAt(track: TrackFrame[], t: number, before = 0.6, after = 0.8): number | null {
+  if (!track.length) return null
+  let lo = 0, hi = track.length
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1
+    if (track[mid].t < t - before) lo = mid + 1
+    else hi = mid
+  }
+  let best: number | null = null
+  for (let i = lo + 1; i < track.length && track[i].t <= t + after; i++) {
+    const a = track[i - 1], b = track[i]
+    const dt = b.t - a.t
+    if (dt <= 0 || dt > 0.35) continue
+    for (const side of ["near", "far"] as Side[]) {
+      for (let k = 0; k < b[side].length; k++) {
+        const p = a[side][k], q = b[side][k]
+        if (!p || !q) continue
+        const v = dist(p, q) / dt
+        if (best == null || v > best) best = v
+      }
+    }
+  }
+  return best
+}
+
+/**
+ * Turns heard sounds into hits:
+ * - two hits are never closer than `minGap` (a hit's echo, a landing stomp or
+ *   a shoe squeak right after it are not new hits): the clearer sound wins.
+ *   Pro doubles drives can be 0.3 s apart; singles exchanges rarely under 0.5 s;
+ * - when players are tracked, a sound while everyone stands or walks (below
+ *   1 m/s, up to 0.8 s after: a serve is hit standing still, but the receiver
+ *   moves straight away) is not a hit: between points it is commentary, talk or clapping.
+ */
+export function keepPlausibleHits(list: Onset[], track: TrackFrame[], minGap = 0.4): Onset[] {
+  const sorted = [...list].sort((a, b) => a.t - b.t)
+  const spaced: Onset[] = []
+  for (const o of sorted) {
+    const last = spaced[spaced.length - 1]
+    if (last && o.t - last.t < minGap) {
+      if ((o.contrast ?? o.rise) > (last.contrast ?? last.rise)) spaced[spaced.length - 1] = o
+    } else spaced.push(o)
+  }
+  return spaced.filter((o) => {
+    const v = activityAt(track, o.t)
+    return v == null || v >= 1
+  })
+}
+
 export function buildResult(session: Session): AnalysisResult {
   const { settings, range, track, edits } = session
   const slots = settings.format === "doubles" ? 2 : 1
@@ -174,7 +225,11 @@ export function buildResult(session: Session): AnalysisResult {
     (o) => o.t >= range.start && o.t <= range.end && !session.offCamera?.some((c) => o.t >= c.start && o.t <= c.end)
   )
   const strong = usable.filter((o) => onsetScore(o) >= settings.sensitivityDb)
-  const heard = [...strong, ...rhythmRescue(usable, strong, settings.rallyGapS)]
+  const heard = keepPlausibleHits(
+    [...strong, ...rhythmRescue(usable, strong, settings.rallyGapS)],
+    track,
+    settings.format === "doubles" ? 0.3 : 0.5
+  )
   const raws: Raw[] = [
     ...heard.map((o) => ({ id: `a${Math.round(o.t * 1000)}`, t: o.t, manual: false, level: o.level })),
     ...session.manualShots.map((m) => ({ id: m.id, t: m.t, manual: true, level: null })),

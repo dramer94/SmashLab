@@ -458,7 +458,7 @@ export async function trackPlayers(
     onProgress("Reading the empty court", bgFrames.length / nBg)
   }
   if (bgFrames.length < 5) {
-    throw new Error("Most of this clip does not look like the frame you marked. Mark the court on a frame from the main camera, or pick a part of the video filmed from one spot.")
+    throw new Error("The camera moves in most of this clip, so most frames do not match the frame you marked and players cannot be measured. Use a video from a phone that stays still (tripod or propped up), or pick a part filmed from one spot. For TV footage, mark the court on a frame from the main camera.")
   }
   const bg = medianBackground(bgFrames, len)
   bgFrames.length = 0
