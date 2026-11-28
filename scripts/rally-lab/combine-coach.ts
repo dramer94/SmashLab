@@ -98,7 +98,8 @@ const out = [...byPlayer.entries()].map(([name, reps]) => {
     totals: {
       shots: reps.reduce((a, r) => a + r.shots, 0),
       byType: Object.fromEntries(Object.entries(byType).map(([k, v]) => [SHOT_LABELS[k as keyof typeof SHOT_LABELS] ?? k, v])),
-      smashes: smash.length,
+      smashes: byType.smash ?? 0,
+      smashesTimed: smash.length,
       avgSmashKmh: smash.length ? Math.round(smash.reduce((a, b) => a + b, 0) / smash.length) : null,
       distanceM: Math.round(reps.reduce((a, r) => a + r.distanceM, 0)),
     },
