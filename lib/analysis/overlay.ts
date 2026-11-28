@@ -2,6 +2,7 @@ import { applyHomography, computeHomography, COURT_L, COURT_W, courtLines, dist,
 import { positionAt, SHOT_LABELS } from "./engine"
 import { DEFAULT_EFFECTS, THEMES, type Effects, type View } from "./effects"
 import type { AnalysisResult, Pt, Session, Shot, Side } from "./types"
+import { drawTelemetry } from "./telemetry"
 
 /** Playback speed of slow-motion replays. */
 export const REPLAY_RATE = 0.35
@@ -109,6 +110,11 @@ export function drawOverlay(
 ) {
   const { session, result, courtToImage } = model
   const fx = extras.effects ?? DEFAULT_EFFECTS
+  // The telemetry look draws its own HUD (no focus zoom: it marks the focused player instead).
+  if (fx.theme === "telemetry" && courtToImage && !extras.view && !extras.replay) {
+    drawTelemetry(ctx, W, H, t, model, opts, fx)
+    return
+  }
   const theme = THEMES[fx.theme]
   const colors = fx.colors
   const replay = extras.replay ?? null

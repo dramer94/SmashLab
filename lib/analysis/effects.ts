@@ -29,7 +29,7 @@ export interface Brand {
   logo: string | null
 }
 
-export const HUD_THEMES = ["classic", "broadcast", "minimal", "light", "neon", "club"] as const
+export const HUD_THEMES = ["classic", "broadcast", "minimal", "light", "neon", "club", "telemetry"] as const
 export type HudTheme = (typeof HUD_THEMES)[number]
 
 export interface ThemeStyle {
@@ -50,6 +50,7 @@ export const THEMES: Record<HudTheme, ThemeStyle> = {
   light: { label: "Light", panel: "250,250,250", text: "#0b0b0b", muted: "#52514e", radius: 10, layout: "stack", upper: false, glow: null },
   neon: { label: "Neon", panel: "5,5,12", text: "#e0fbff", muted: "#67e8f9", radius: 12, layout: "stack", upper: true, glow: "#22d3ee" },
   club: { label: "Club", panel: "20,20,20", text: "#ffffff", muted: "#d1d5db", radius: 0, layout: "bar", upper: true, glow: null },
+  telemetry: { label: "Telemetry", panel: "6,10,22", text: "#f2f6ff", muted: "#8b96b8", radius: 0, layout: "stack", upper: true, glow: "#22e1ff" },
 }
 
 export const DEFAULT_EFFECTS: Effects = {
