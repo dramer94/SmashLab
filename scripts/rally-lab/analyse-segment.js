@@ -1,0 +1,30 @@
+// usage: node run-seg.js <video> <from> <to> <markT> '<corners json>' <outSession>
+const { chromium } = require('playwright');
+const [file, from, to, markT, cornersJson, out] = process.argv.slice(2);
+(async () => {
+  const b = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+  const p = await b.newPage({ viewport: { width: 1440, height: 1100 } });
+  p.on('pageerror', e => console.log('pageerror:', e.message));
+  await p.goto((process.env.APP_URL || 'http://localhost:3000') + '/analysis', { waitUntil: 'networkidle' });
+  await p.evaluate(() => localStorage.clear());
+  await p.setInputFiles('input[type=file][accept^="video"]', file);
+  await p.getByText('Mark the court').first().waitFor();
+  await p.getByRole('button', { name: 'doubles', exact: true }).click();
+  await p.getByRole('button', { name: 'Two court lines' }).click();
+  await p.getByLabel(/Farther line/).selectOption('farShort');
+  await p.getByLabel(/Nearer line/).selectOption('nearShort');
+  await p.locator('input[type=range]').first().fill(markT); await p.waitForTimeout(1500);
+  await p.getByText('Clear and tap corners').click();
+  const r = await p.locator('svg.cursor-crosshair').boundingBox(); const M = 0.1;
+  for (const [x, y] of JSON.parse(cornersJson)) await p.mouse.click(r.x + (x / 1280 + M) / (1 + 2 * M) * r.width, r.y + (y / 720 + M) / (1 + 2 * M) * r.height);
+  await p.getByLabel('From (s)').fill(from);
+  await p.getByLabel('To (s)').fill(to);
+  const t0 = Date.now();
+  await p.getByRole('button', { name: /Analyse video/ }).click();
+  await p.getByText('Shot sensitivity').waitFor({ timeout: 1500000 });
+  await p.waitForFunction(() => !!localStorage.getItem('smashlab.analysis.index'), null, { timeout: 30000 });
+  const s = await p.evaluate(() => { const k = JSON.parse(localStorage.getItem('smashlab.analysis.index'))[0].id; return JSON.parse(localStorage.getItem('smashlab.analysis.' + k)) });
+  require('fs').mkdirSync(require('path').dirname(out), { recursive: true }); require('fs').writeFileSync(out, JSON.stringify(s));
+  console.log(out, 'took', Math.round((Date.now() - t0) / 1000), 's; detection', JSON.stringify(s.detection), 'colors', JSON.stringify(s.playerColors));
+  await b.close();
+})();

@@ -4,3 +4,7 @@ node_modules
 .env.local
 *.tsbuildinfo
 next-env.d.ts
+
+# Rally Analysis lab data (videos, frames, faces, VACA photos: personal data)
+scripts/rally-lab/lab-data/
+lab-data/
