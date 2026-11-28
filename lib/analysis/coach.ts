@@ -262,7 +262,9 @@ export function coachReport(session: Session, result: AnalysisResult, side: Side
     }
     const smashes = mine.filter((s) => s.type === "smash")
     const fromBack = mine.filter((s) => s.pos && depthFromNet(s.pos) > 4.3)
-    const sp = smashes.map((s) => s.speedKmh).filter((v): v is number => v != null)
+    // Readings over 300 km/h from a phone video are measuring errors (a mis-tracked foot), not smashes.
+    const sp = smashes.map((s) => s.speedKmh).filter((v): v is number => v != null && v <= 300)
+    const typical = sp.length ? [...sp].sort((a, b) => a - b)[Math.floor(sp.length / 2)] : null
     if (sp.length) numbers.push({ label: "Smashes (average speed, estimate)", value: `${smashes.length} (${Math.round(sp.reduce((a, b) => a + b, 0) / sp.length)} km/h)` })
     if (fromBack.length >= 4 && smashes.length / fromBack.length < 0.2) {
       tips.push({
@@ -274,13 +276,13 @@ export function coachReport(session: Session, result: AnalysisResult, side: Side
         moments: fromBack.slice(0, 3).map((s) => ({ t: s.t - 0.8, label: `${SHOT_LABELS[s.type]} from the back at ${fmtT(session, s.t)}` })),
         weight: 0.25,
       })
-    } else if (smashes.length >= 3 && sp.length && Math.max(...sp) >= 200) {
+    } else if (smashes.length >= 3 && sp.length >= 2 && typical != null && typical >= 180) {
       tips.push({
         kind: "strength",
         title: "Strong smash",
-        evidence: `${smashes.length} smashes, the fastest about ${Math.max(...sp)} km/h (estimate).`,
+        evidence: `${smashes.length} smashes, typically about ${typical} km/h (estimate).`,
         why: "A smash that forces weak replies wins you short rallies.",
-        moments: smashes.sort((a, b) => (b.speedKmh ?? 0) - (a.speedKmh ?? 0)).slice(0, 2).map((s) => ({ t: s.t - 0.8, label: `Smash at ${fmtT(session, s.t)}` })),
+        moments: smashes.filter((s) => (s.speedKmh ?? 0) <= 300).sort((a, b) => (b.speedKmh ?? 0) - (a.speedKmh ?? 0)).slice(0, 2).map((s) => ({ t: s.t - 0.8, label: `Smash at ${fmtT(session, s.t)}` })),
         weight: 0.2,
       })
     }

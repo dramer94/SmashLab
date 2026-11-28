@@ -21,7 +21,12 @@ const [file, from, to, markT, cornersJson, out] = process.argv.slice(2);
   await p.getByLabel('To (s)').fill(to);
   const t0 = Date.now();
   await p.getByRole('button', { name: /Analyse video/ }).click();
-  await p.getByText('Shot sensitivity').waitFor({ timeout: 1500000 });
+  // Stop on an app error (e.g. the phone moved) instead of waiting for results forever.
+  const outcome = await Promise.race([
+    p.getByText('Shot sensitivity').waitFor({ timeout: 1500000 }).then(() => 'ok'),
+    p.getByText(/camera moves in most of this clip|Court marks do not form/).first().waitFor({ timeout: 1500000 }).then(() => 'error'),
+  ]);
+  if (outcome === 'error') { console.log('APP ERROR:', (await p.getByText(/camera moves in most of this clip|Court marks do not form/).first().innerText()).slice(0, 200)); await b.close(); process.exit(2); }
   await p.waitForFunction(() => !!localStorage.getItem('smashlab.analysis.index'), null, { timeout: 30000 });
   const s = await p.evaluate(() => { const k = JSON.parse(localStorage.getItem('smashlab.analysis.index'))[0].id; return JSON.parse(localStorage.getItem('smashlab.analysis.' + k)) });
   require('fs').mkdirSync(require('path').dirname(out), { recursive: true }); require('fs').writeFileSync(out, JSON.stringify(s));

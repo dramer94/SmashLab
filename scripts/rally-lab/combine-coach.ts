@@ -11,6 +11,8 @@ type Part = { file: string; video: string; names: Record<string, string> }
 const [cfgPath, outPath] = process.argv.slice(2)
 const parts: Part[] = JSON.parse(readFileSync(cfgPath, "utf8"))
 
+/** Faster than this from a club phone video is a measuring error, not a smash. */
+const MAX_KMH = 260
 const mmss = (s: number) => `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, "0")}`
 
 interface PartReport {
@@ -21,6 +23,8 @@ interface PartReport {
   summary: string
   numbers: { label: string; value: string }[]
   tips: (CoachTip & { video: string })[]
+  heat: [number, number][]
+  highlights: { t: number; label: string; video: string; file: string; focus: string; names: Record<string, string> }[]
   shots: number
   byType: Record<string, number>
   smashKmh: number[]
@@ -44,7 +48,21 @@ for (const part of parts) {
     for (const s of mine) byType[s.type] = (byType[s.type] ?? 0) + 1
     const stats = result.players.find((p) => p.side === side && p.playerIndex === slot)
     // Moment times are video times; label them with the video so they can be found.
-    const tag = (t: CoachTip) => ({ ...t, video: part.video, moments: t.moments.map((m) => ({ ...m, label: `${part.video} ${mmss(m.t)}` })) })
+    const where = { video: part.video, file: part.file, focus: key, names: part.names }
+    const tag = (t: CoachTip) => ({ ...t, video: part.video, moments: t.moments.map((m) => ({ ...m, ...where, label: `${part.video} ${mmss(m.t)}` })) })
+    // Highlights: this player's smashes (fastest first), else their attacking shots.
+    const smashes = mine.filter((s) => s.type === "smash").sort((a, b) => (b.speedKmh ?? 0) - (a.speedKmh ?? 0))
+    const attack = mine.filter((s) => ["drive", "push", "drop", "net"].includes(s.type))
+    const highlights = (smashes.length ? smashes : attack).slice(0, 2).map((s) => ({ t: s.t - 2, label: `${SHOT_LABELS[s.type]}${s.speedKmh && s.speedKmh <= MAX_KMH ? ` ~${s.speedKmh} km/h` : ""} · ${part.video} ${mmss(s.t)}`, ...where }))
+    // Where they stood during rallies, every 0.5 s, turned so their half is always the bottom one.
+    const inRally = (t: number) => result.rallies.some((r) => t >= r.start - 0.3 && t <= r.end + 0.6)
+    const heat: [number, number][] = []
+    session.track.forEach((f, i) => {
+      const p = f[side][slot]
+      if (!p || i % 5 || !inRally(f.t)) return
+      const q = side === "near" ? p : { x: 6.1 - p.x, y: 13.4 - p.y }
+      heat.push([Math.round(q.x * 100) / 100, Math.round(q.y * 100) / 100])
+    })
     const list = byPlayer.get(name) ?? []
     list.push({
       video: part.video,
@@ -53,9 +71,11 @@ for (const part of parts) {
       summary: rep.summary,
       numbers: rep.numbers,
       tips: [...rep.strengths, ...rep.improve].map(tag),
+      highlights,
+      heat,
       shots: mine.length,
       byType,
-      smashKmh: mine.filter((s) => s.type === "smash" && s.speedKmh != null).map((s) => s.speedKmh!),
+      smashKmh: mine.filter((s) => s.type === "smash" && s.speedKmh != null && s.speedKmh <= MAX_KMH).map((s) => s.speedKmh!),
       distanceM: stats?.distanceM ?? 0,
       rallies: result.rallies.length,
     })
@@ -83,7 +103,8 @@ const out = [...byPlayer.entries()].map(([name, reps]) => {
       why: best.why,
       drill: best.drill,
       moments: g.parts.flatMap((p) => p.moments).slice(0, 4),
-      score: g.parts.length * 10 + g.parts.reduce((a, p) => a + p.weight, 0),
+      // Repeated beats one-off; a real finding beats a "compared with the others" one.
+      score: g.parts.length * 10 + g.parts.reduce((a, p) => a + p.weight, 0) - (g.parts.every((p) => p.relative) ? 5 : 0),
     }
   }).sort((a, b) => b.score - a.score)
   const byType: Record<string, number> = {}
@@ -94,7 +115,9 @@ const out = [...byPlayer.entries()].map(([name, reps]) => {
   return {
     name,
     videos: [...new Set(reps.map((r) => r.video))],
-    parts: reps.map(({ tips, ...r }) => r),
+    parts: reps.map(({ tips, highlights, heat, ...r }) => r),
+    heat: reps.flatMap((r) => r.heat),
+    highlights: reps.flatMap((r) => r.highlights).slice(0, 3),
     totals: {
       shots: reps.reduce((a, r) => a + r.shots, 0),
       byType: Object.fromEntries(Object.entries(byType).map(([k, v]) => [SHOT_LABELS[k as keyof typeof SHOT_LABELS] ?? k, v])),

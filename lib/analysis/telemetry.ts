@@ -340,7 +340,7 @@ export function drawTelemetry(
     ctx.fillText(SHOT_LABELS[lastShot.type].toUpperCase(), bx + 12 * u, by + 34 * u)
     ctx.font = `600 ${11 * u}px ${MONO}`
     ctx.fillStyle = NEON[lastShot.side]
-    const who = `${name(lastShot.side, lastShot.playerIndex).toUpperCase()}${lastShot.speedKmh ? ` · ~${lastShot.speedKmh} KM/H` : ""}`
+    const who = `${name(lastShot.side, lastShot.playerIndex).toUpperCase()}${lastShot.speedKmh && lastShot.speedKmh <= 260 ? ` · ~${lastShot.speedKmh} KM/H` : ""}`
     ctx.fillText(who, bx + 12 * u, by + 52 * u)
   }
 
