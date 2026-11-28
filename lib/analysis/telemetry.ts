@@ -116,6 +116,7 @@ export function drawTelemetry(
 
   // ---- Players on court: ring at the feet, name tag above the head ---------
   const onCourt: { side: Side; s: number; p: Pt }[] = []
+  const tags: { x: number; y: number; w: number; footX: number; label: string; color: string }[] = []
   if (courtToImage && !offCam) {
     for (const side of ["far", "near"] as Side[]) {
       for (let s = 0; s < slots; s++) {
@@ -142,20 +143,31 @@ export function drawTelemetry(
           const headY = c.y - Math.max(60 * u, ppm * 1.85)
           const label = `${side === "far" ? "F" : "N"}${s + 1} · ${name(side, s).toUpperCase()}`
           ctx.font = `700 ${12 * u}px ${MONO}`
-          const tw = ctx.measureText(label).width
-          const bx = c.x - tw / 2 - 8 * u, by = headY - 24 * u
-          ctx.fillStyle = color
-          ctx.fillRect(bx, by, tw + 16 * u, 20 * u)
-          ctx.fillStyle = "#04060d"
-          ctx.fillText(label, bx + 8 * u, by + 10 * u)
-          ctx.strokeStyle = color
-          ctx.lineWidth = 1.2 * u
-          ctx.beginPath()
-          ctx.moveTo(c.x, by + 20 * u)
-          ctx.lineTo(c.x, headY - 2 * u)
-          ctx.stroke()
+          const w = ctx.measureText(label).width + 16 * u
+          tags.push({ x: c.x - w / 2, y: headY - 24 * u, w, footX: c.x, label, color })
         }
       }
+    }
+    // Lift a tag that would sit on top of another one (partners standing close).
+    tags.sort((a, b) => b.y - a.y)
+    for (let i = 0; i < tags.length; i++) {
+      for (let j = 0; j < i; j++) {
+        const a = tags[i], b = tags[j]
+        if (a.x < b.x + b.w + 4 * u && b.x < a.x + a.w + 4 * u && Math.abs(a.y - b.y) < 24 * u) a.y = b.y - 26 * u
+      }
+    }
+    for (const g of tags) {
+      ctx.font = `700 ${12 * u}px ${MONO}`
+      ctx.fillStyle = g.color
+      ctx.fillRect(g.x, g.y, g.w, 20 * u)
+      ctx.fillStyle = "#04060d"
+      ctx.fillText(g.label, g.x + 8 * u, g.y + 10 * u)
+      ctx.strokeStyle = g.color
+      ctx.lineWidth = 1.2 * u
+      ctx.beginPath()
+      ctx.moveTo(g.footX, g.y + 20 * u)
+      ctx.lineTo(g.footX, g.y + 34 * u)
+      ctx.stroke()
     }
   }
 
@@ -283,8 +295,10 @@ export function drawTelemetry(
 
   // ---- Pressure meter, top centre: attacking shots in the last 6 of this rally ---
   {
-    const mw = Math.min(520 * u, W * 0.4), mh = 16 * u
-    const mx = W / 2 - mw / 2, my = pad + 14 * u
+    const left = pad + sbW + 34 * u + 90 * u
+    const right = W - pad - 80 * u
+    const mw = Math.max(120 * u, Math.min(460 * u, right - left)), mh = 16 * u
+    const mx = left + (right - left - mw) / 2, my = pad + 14 * u
     const recent = inRally && rally ? rally.shots.filter((x) => x.t <= t + 0.02 && x.type !== "serve").slice(-6) : []
     const att = (side: Side) => recent.filter((x) => x.side === side && ATTACK.includes(x.type)).length
     const a = att("far"), b = att("near")
@@ -311,7 +325,7 @@ export function drawTelemetry(
     const verdict = !recent.length ? "PRESSURE METER" : Math.abs(f - 0.5) < 0.17 ? "NEUTRAL" : `${(f > 0.5 ? team("far") : team("near")).toUpperCase()} ATTACKING`
     ctx.font = `600 ${10 * u}px ${MONO}`
     ctx.fillStyle = "#c9d3f2"
-    ctx.fillText(verdict, W / 2 - ctx.measureText(verdict).width / 2, my + mh + 12 * u)
+    ctx.fillText(verdict, mx + mw / 2 - ctx.measureText(verdict).width / 2, my + mh + 12 * u)
   }
 
   // ---- Shot call-out, bottom left --------------------------------------------------
@@ -378,7 +392,7 @@ export function drawTelemetry(
   // ---- Honesty tag, top right -----------------------------------------------------
   ctx.font = `600 ${10 * u}px ${MONO}`
   const tag = "SMASHLAB · AI ESTIMATES"
-  ctx.fillStyle = "rgba(220,230,255,0.75)"
-  ctx.fillText(tag, W - pad - ctx.measureText(tag).width, pad + 6 * u)
+  ctx.fillStyle = "rgba(220,230,255,0.7)"
+  ctx.fillText(tag, W / 2 - ctx.measureText(tag).width / 2, H - pad)
   ctx.restore()
 }
