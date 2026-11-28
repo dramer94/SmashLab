@@ -2,7 +2,7 @@
 const { chromium } = require('playwright');
 const [file, from, to, markT, cornersJson, out] = process.argv.slice(2);
 (async () => {
-  const b = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+  const b = await chromium.launch({ channel: process.env.PW_CHANNEL || undefined, args: ['--autoplay-policy=no-user-gesture-required'] });
   const p = await b.newPage({ viewport: { width: 1440, height: 1100 } });
   p.on('pageerror', e => console.log('pageerror:', e.message));
   await p.goto((process.env.APP_URL || 'http://localhost:3000') + '/analysis', { waitUntil: 'networkidle' });

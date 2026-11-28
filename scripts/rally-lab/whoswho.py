@@ -7,7 +7,7 @@ rows = []
 for key in ['far0', 'far1', 'near0', 'near1']:
     tiles = []
     for p in d['picks'][key]:
-        subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-ss', str(p['t']), '-i', video, '-frames:v', '1', 'ww.png'])
+        subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-ss', str(p['t']), '-i', video, '-frames:v', '1', '-vf', 'scale=1280:720', 'ww.png'])
         im = Image.open('ww.png').convert('RGB')
         h = p['h']; w = h * 0.7
         box = (int(p['x'] - w / 2), int(p['y'] - h * 0.95), int(p['x'] + w / 2), int(p['y'] + h * 0.08))
